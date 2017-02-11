@@ -14,17 +14,9 @@ class UI:
         self.min_y = min(y for _,y in self.board.positions)
         self.max_y = max(y for _,y in self.board.positions)
 
-        # Hard-coded for now, will come from board.
-        provided_moves = [
-            (QUEEN, (2,1), (2,0)),
-            (QUEEN, (2,1), (1,1)),
-        ]
-        for insect in [ANT, BEETLE, GRASSHOPPER, SPIDER]:
-            for position in [(1,1), (2,0), (2,2), (3,0), (3,1)]:
-                provided_moves += [(insect, None, position)]
-
+        # Index board's valid moves.
         moves = {}
-        for move in provided_moves:
+        for move in self.board.valid_moves():
             key = (move[0], move[1])
             if not key in moves:
                 moves[key] = [move[2]]
@@ -102,12 +94,14 @@ class UI:
         for ii in range(len(self.moves)):
             src = self.moves[ii][0][0]
             if self.moves[ii][0][1] is not None:
-                src = '%s in %s' % (src, self.moves[ii][0][1])
+                src = 'move %s from %s to ' % (src, self.moves[ii][0][1])
+            else:
+                src = 'place new %s in ' % src
             if example is None:
                 move_to = self.moves[ii][1][0]
-                example = '  Example: to move %s to %s, type "%d %d,%d"' % (
+                example = '  Example: to %s%s, type "%d %d,%d"' % (
                     src, move_to, ii, move_to[0], move_to[1])
-            yield '  [%d] %s to %s' % (ii, src, self.moves[ii][1])
+            yield '  [%d] %s%s' % (ii, src, self.moves[ii][1])
         yield example
         yield '  (Note: if there is only one valid move for a piece, you can enter only the first number)'
 

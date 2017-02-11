@@ -26,6 +26,19 @@ class Board:
 #    def valid_moves(self, position):
 #        return set()
 
+    def valid_moves(self):
+        """Yields tuple (insect, source_position, target_position) for each valid move."""
+        # New placements.
+        new_placements = list(self.new_placements())
+        print(self.stack[self.next_player].items())
+        for insect, count in self.stack[self.next_player].items():
+            print(insect, count)
+            if count > 0:
+                for target_position in new_placements:
+                    yield (insect, None, target_position)
+
+        # TODO: moves.
+
     def removable(self, position):
         """Determine whether a piece on specified position is removable without splitting the hive."""
         start_neighbours = set(self.occupied_neighbours(position))
@@ -43,11 +56,23 @@ class Board:
         return not start_neighbours - visited
 
     def new_placements(self):
-        """Valid placements for a new piece. These are connected placements not neighbouring any opponent's pieces."""
+        """Return tuple with valid placements for a new piece. These are connected placements not neighbouring any opponent's pieces."""
+        # Trivial case: first piece in play:
+        if len(self.positions) == 0:
+            return ((0,0),)
+
+        # Second trivial case: second piece in play:
+        if len(self.positions) == 1:
+            return self.neighbours((0,0))
+
+        # Gather all empty spaces connected to friendly pieces.
         connected = set()
-        for position in self.positions:
-            connected.update(self.empty_neighbours(position))
-        return (position for position in connected if not next(self.opponent_neighbours(position), None))
+        for position, piece in self.positions.items():
+            if piece.player == self.next_player:
+                connected.update(self.empty_neighbours(position))
+
+        # Filter them for 
+        return tuple(position for position in connected if not list(self.opponent_neighbours(position)))
 
     def my_pieces(self):
         """Positions with next player's pieces"""
