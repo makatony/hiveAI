@@ -1,11 +1,21 @@
 #!/usr/bin/python3
 
 import state
-from state import Piece
+from state import *
+import ui_ascii
 
+def main():
+    # Entry point
+    board = Board({
+        (0,0): Piece(ANT, 0),
+        (-1,0): Piece(BEETLE, 1),
+        (1,0): Piece(SPIDER, 0),
+        (-1,1): Piece(GRASSHOPPER, 1),
+        (2,1): Piece(QUEEN, 0),
+    })
+    ui = ui_ascii.UI(board)
+    ui.print()
 
-# Entry point
-board = state.Board({ (0, 0): Piece(state.ANT, 0) })
-print(board)
-print(list(board.my_neighbours((0, 0))))
+if __name__ == '__main__':
+    main()
 
