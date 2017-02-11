@@ -12,7 +12,9 @@ def main():
         (1,0): Piece(SPIDER, 0),
         (-1,1): Piece(GRASSHOPPER, 1),
         (2,1): Piece(QUEEN, 0),
+        (-1,2): Piece(GRASSHOPPER, 1),
     })
+    board.next_player=1
     ui = ui_ascii.UI(board)
     ui.print()
     print(ui.read())

@@ -29,14 +29,20 @@ class Board:
     def valid_moves(self):
         """Yields tuple (insect, source_position, target_position) for each valid move."""
         # New placements.
-        new_placements = list(self.new_placements())
-        print(self.stack[self.next_player].items())
-        for insect, count in self.stack[self.next_player].items():
-            print(insect, count)
+        new_placements = None
+        player_stack = self.stack[self.next_player]
+        must_play_queen = player_stack[QUEEN] > 0 and len(tuple(self.my_pieces())) >= 3
+        for insect, count in player_stack.items():
+            if must_play_queen and insect != QUEEN:
+                continue
             if count > 0:
+                if new_placements is None:
+                    new_placements = self.new_placements()
                 for target_position in new_placements:
                     yield (insect, None, target_position)
-
+        if player_stack[QUEEN] > 0:
+            # No moves while queen is not placed.
+            return
         # TODO: moves.
 
     def removable(self, position):
