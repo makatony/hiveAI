@@ -12,6 +12,23 @@ class UI:
         self.min_y = min(y for _,y in self.board.positions)
         self.max_y = max(y for _,y in self.board.positions)
 
+        # Hard-coded for now, will come from board.
+        provided_moves = [
+            (QUEEN, (2,1), (2,0)),
+            (QUEEN, (2,1), (1,1)),
+        ]
+        for insect in [ANT, BEETLE, GRASSHOPPER, SPIDER]:
+            for position in [(1,1), (2,0), (2,2), (3,0), (3,1)]:
+                provided_moves += [(insect, None, position)]
+
+        self.moves = {}
+        for move in provided_moves:
+            key = (move[0], move[1])
+            if not key in self.moves:
+                self.moves[key] = [move[2]]
+            else:
+                self.moves[key] += [move[2]]
+
     # Each position in the board are represent by so many lines and chars.
     LINES_PER_ROW = 4
     CHARS_PER_COLUMN = 9
@@ -27,6 +44,10 @@ class UI:
         yield ''
         for line in self._stack_lines():
             yield line
+        yield ''
+        yield self._player_turn_line()
+        for line in self._player_moves_lines():
+            yield line
 
 
     def _stack_lines(self):
@@ -34,6 +55,25 @@ class UI:
         for (player, pieces) in self.board.stack.items():
             pieces_str_list = ["%s-%d" % (insect, count) for insect, count in sorted(pieces.items())]
             yield 'Player %d stack: %s' % (player, ', '.join(pieces_str_list))
+
+    def _player_turn_line(self):
+        piece = Piece(QUEEN, self.board.next_player)
+        return '%sPlayer %d turn to play:%s' % (self._color_start(piece), self.board.next_player, self._color_end())
+
+    def _player_moves_lines(self):
+        example = None
+        sorted_moves = sorted(self.moves.items())
+        for ii in range(len(sorted_moves)):
+            src = sorted_moves[ii][0][0]
+            if sorted_moves[ii][0][1] is not None:
+                src = '%s in %s' % (src, sorted_moves[ii][0][1])
+            if example is None:
+                move_to = sorted_moves[ii][1][0]
+                example = '  Example: to move %s to %s, type "%d %s"' % (
+                    src, move_to, ii, move_to)
+            yield '  [%d] %s to %s' % (ii, src, sorted_moves[ii][1])
+        yield example
+
 
     def _board_lines(self):
         """Yields lines of the printed board."""

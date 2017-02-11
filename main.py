@@ -15,16 +15,16 @@ def main():
     })
     ui = ui_ascii.UI(board)
     ui.print()
-    print('')
 
-    print('My pieces: ' + str(list(board.my_pieces())))
-    print('Opponent pieces: ' + str(list(board.opponent_pieces())))
-    print('Occupied neighours: ' + str(list(board.occupied_neighbours((0, 0)))))
-    print('Empty neighours: ' + str(list(board.empty_neighbours((0, 0)))))
-    print('My neighours: ' + str(list(board.my_neighbours((0, 0)))))
-    print('Opponent neighours: ' + str(list(board.opponent_neighbours((0, 0)))))
-    print('Connected placements: ' +str( board.connected_placements()))
-    print('New placements: ' + str(board.new_placements()))
+    # print('')
+    # print('My pieces: ' + str(list(board.my_pieces())))
+    # print('Opponent pieces: ' + str(list(board.opponent_pieces())))
+    # print('Occupied neighours: ' + str(list(board.occupied_neighbours((0, 0)))))
+    # print('Empty neighours: ' + str(list(board.empty_neighbours((0, 0)))))
+    # print('My neighours: ' + str(list(board.my_neighbours((0, 0)))))
+    # print('Opponent neighours: ' + str(list(board.opponent_neighbours((0, 0)))))
+    # print('Connected placements: ' +str( board.connected_placements()))
+    # print('New placements: ' + str(board.new_placements()))
 
 
 if __name__ == '__main__':
