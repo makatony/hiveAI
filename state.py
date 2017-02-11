@@ -39,9 +39,11 @@ class Board:
         return self.connected_placements() - opponent_connected
 
     def my_pieces(self):
+        """Positions with next player's pieces"""
         return (position for position, piece in self.positions.items() if piece.player == self.next_player)
 
     def opponent_pieces(self):
+        """Positions with opponent player's pieces"""
         return (position for position, piece in self.positions.items() if piece.player != self.next_player)
 
     def my_neighbours(self, position):
