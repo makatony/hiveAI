@@ -1,5 +1,7 @@
 # Ascii UI, optionally colored
 import math
+import re
+
 from state import *
 
 class UI:
@@ -21,22 +23,57 @@ class UI:
             for position in [(1,1), (2,0), (2,2), (3,0), (3,1)]:
                 provided_moves += [(insect, None, position)]
 
-        self.moves = {}
+        moves = {}
         for move in provided_moves:
             key = (move[0], move[1])
-            if not key in self.moves:
-                self.moves[key] = [move[2]]
+            if not key in moves:
+                moves[key] = [move[2]]
             else:
-                self.moves[key] += [move[2]]
+                moves[key] += [move[2]]
+        self.moves = sorted(moves.items())
 
     # Each position in the board are represent by so many lines and chars.
     LINES_PER_ROW = 4
     CHARS_PER_COLUMN = 9
 
+    # Command line input parsing.
+    piece_move_re = re.compile('(\d+)\s+\(?(\-?\d+)\s*,\s*(\-?\d+)\)?\s*')
+    piece_only_re = re.compile('(\d+)\s*')
 
     def print(self):
         for line in self._all_lines():
             print(line)
+
+    def read(self):
+        """Reads and parses next user move, returns (insect, src_pos, tgt_pos)."""
+        while True:
+            raw = input('Please enter your move: ')
+            match = UI.piece_move_re.fullmatch(raw)
+            if match is not None:
+                ii = int(match.group(1))
+                if ii < 0 or ii > len(self.moves):
+                    print('Invalid piece #%d' % ii)
+                    continue
+                move_to = (int(match.group(2)), int(match.group(3)))
+                if move_to not in self.moves[ii][1]:
+                    print('Move to %s not valid' % (move_to,))
+                    continue
+                return (self.moves[ii][0][0], self.moves[ii][0][1], move_to)
+
+            match = UI.piece_only_re.fullmatch(raw)
+            if match is None:
+                print('Unknown entry "%s"' % raw)
+                continue
+            ii = int(match.group(1))
+            if ii < 0 or ii >= len(self.moves):
+                print('Invalid piece #%d' % ii)
+                continue
+            if len(self.moves[ii][1]) > 1:
+                print('Piece #%d have multiple target locations, you must specify' % ii)
+                continue
+            return (self.moves[ii][0][0], self.moves[ii][0][1], move_to)
+
+
 
     def _all_lines(self):
         for line in self._board_lines():
@@ -62,17 +99,17 @@ class UI:
 
     def _player_moves_lines(self):
         example = None
-        sorted_moves = sorted(self.moves.items())
-        for ii in range(len(sorted_moves)):
-            src = sorted_moves[ii][0][0]
-            if sorted_moves[ii][0][1] is not None:
-                src = '%s in %s' % (src, sorted_moves[ii][0][1])
+        for ii in range(len(self.moves)):
+            src = self.moves[ii][0][0]
+            if self.moves[ii][0][1] is not None:
+                src = '%s in %s' % (src, self.moves[ii][0][1])
             if example is None:
-                move_to = sorted_moves[ii][1][0]
-                example = '  Example: to move %s to %s, type "%d %s"' % (
-                    src, move_to, ii, move_to)
-            yield '  [%d] %s to %s' % (ii, src, sorted_moves[ii][1])
+                move_to = self.moves[ii][1][0]
+                example = '  Example: to move %s to %s, type "%d %d,%d"' % (
+                    src, move_to, ii, move_to[0], move_to[1])
+            yield '  [%d] %s to %s' % (ii, src, self.moves[ii][1])
         yield example
+        yield '  (Note: if there is only one valid move for a piece, you can enter only the first number)'
 
 
     def _board_lines(self):

@@ -15,6 +15,7 @@ def main():
     })
     ui = ui_ascii.UI(board)
     ui.print()
+    print(ui.read())
 
     # print('')
     # print('My pieces: ' + str(list(board.my_pieces())))
@@ -31,4 +32,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
