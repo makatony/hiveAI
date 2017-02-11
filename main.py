@@ -26,6 +26,8 @@ def main():
     # print('Opponent neighours: ' + str(list(board.opponent_neighbours((0, 0)))))
     # print('Connected placements: ' +str( board.connected_placements()))
     # print('New placements: ' + str(board.new_placements()))
+    # print('Removable: ' + str(board.removable((0, 0))))
+    # print('Removable: ' + str(board.removable((-1, 1))))
 
 
 if __name__ == '__main__':
