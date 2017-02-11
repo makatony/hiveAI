@@ -3,6 +3,17 @@ import base64
 import sys
 from twisted.python import log
 from twisted.internet import reactor
+import json
+import state
+from state import *
+
+board = Board({
+    (0,0): Piece(ANT, 0),
+    (-1,0): Piece(BEETLE, 1),
+    (1,0): Piece(SPIDER, 0),
+    (-1,1): Piece(GRASSHOPPER, 1),
+    (2,1): Piece(QUEEN, 0),
+})
 
 class MyServerProtocol(WebSocketServerProtocol):
 
@@ -25,7 +36,12 @@ class MyServerProtocol(WebSocketServerProtocol):
             print("Binary message received: {} bytes".format(len(payload)))
         else:
             print("Text message received: {}".format(payload.decode('utf8')))
-
+            j = json.loads(payload.decode('utf8'))
+        
+        if j['action'] == "getBoardLayout":
+			# please put the board as JSON data here
+            # self.sendMessage(jsonData, isBinary)
+			
         # echo back message verbatim
         self.sendMessage(payload, isBinary)
 
