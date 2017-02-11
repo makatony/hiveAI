@@ -29,7 +29,7 @@ class Board:
     def removable(self, position):
         """Determine whether a piece on specified position is removable without splitting the hive."""
         start_neighbours = set(self.occupied_neighbours(position))
-        if len(start_neighbours) > 4:
+        if len(start_neighbours) < 2 or len(start_neighbours) > 4:
             return True
         visited = set()
         visited.add(position)
