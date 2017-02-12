@@ -43,23 +43,50 @@ class Board:
         if player_stack[QUEEN] > 0:
             # No moves while queen is not placed.
             return
-        # TODO: moves.
+
+        # Moves per piece.
+        for position, piece in self.positions.items():
+            if piece.player != self.next_player:
+                continue
+            if not self.removable(position):
+                continue
+            if piece.insect == QUEEN:
+                empty_neighbours = self.empty_neighbours(position)
+
 
     def removable(self, position):
         """Determine whether a piece on specified position is removable without splitting the hive."""
-        start_neighbours = set(self.occupied_neighbours(position))
+        start_neighbours = list(self.occupied_neighbours(position))
+
+        # Trivial cases: only one neighbor; and 5 or 6 neighbors, in which case they will forceabley
+        # stay connected. 
         if len(start_neighbours) < 2 or len(start_neighbours) > 4:
             return True
+
+        # Starting from one of the neighbors (start_neighbours[0]), all other have to be reached. 
         visited = set()
         visited.add(position)
-        remaining = set(list(start_neighbours)[:1])
-        while remaining:
-            new_remaining = set()
-            for position in remaining:
-                new_remaining.update(neighbour for neighbour in self.occupied_neighbours(position) if neighbour not in visited)
-            visited.update(remaining)
-            remaining = new_remaining
-        return not start_neighbours - visited
+
+        # temaining is the list of pieces we need to reach to prove that the graph will still be
+        # connected.
+        remaining = set(start_neighbours[:1])
+
+        # to_visit is the next list of nodes to visit in our BFS.
+        to_visit = set(start_neighbours[0])
+        while to_visit:
+            new_to_visit = set()
+            for visit in to_visit:
+                for position in self.occupied_neighbours(visit):
+                    if position in visited:
+                        continue
+                    visited.update(position)
+                    if position in remaining:
+                        remaining.remove(position)
+                        if not remaining:
+                            return True
+                    new_to_visit.update(position)
+            to_visit = new_to_visit
+        return False
 
     def new_placements(self):
         """Return tuple with valid placements for a new piece. These are connected placements not neighbouring any opponent's pieces."""
@@ -77,7 +104,7 @@ class Board:
             if piece.player == self.next_player:
                 connected.update(self.empty_neighbours(position))
 
-        # Filter them for 
+        # Filter out those positions that have any opponent as neighbour.
         return tuple(position for position in connected if not list(self.opponent_neighbours(position)))
 
     def my_pieces(self):
@@ -103,6 +130,18 @@ class Board:
     def empty_neighbours(self, position):
         """Neighbouring positions without a piece"""
         return (pos for pos in self.neighbours(position) if pos not in self.positions)
+
+    def connected_empty_neighbours(self, position, original_position, invalid):
+        """Returns neighbouring positions that are empty but still connected to the graph.
+
+        Args;
+          position: where to search for the neighboors.
+          original_position: where the piece is going to leave from, presumably will be 
+            empty and therefore can't be used for invalid is a list of positions not valid to move to, and that shouldn't be
+        considered for connectedness (presumably where the )...
+        """
+        pass
+
 
     def neighbours(self, position):
         """Valid neighbouring positions"""
