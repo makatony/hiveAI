@@ -15,6 +15,7 @@ board = Board({
     (2,1): Piece(QUEEN, 0),
 })
 
+
 class MyServerProtocol(WebSocketServerProtocol):
 
     def onConnect(self, request):
@@ -38,10 +39,25 @@ class MyServerProtocol(WebSocketServerProtocol):
             print("Text message received: {}".format(payload.decode('utf8')))
             j = json.loads(payload.decode('utf8'))
         
-        if j['action'] == "getBoardLayout":
-			# please put the board as JSON data here
-            # self.sendMessage(jsonData, isBinary)
-			
+        if j['action'] == "getBoardPieces":
+            boardPieces = json.loads('{}')
+            myPieces = list(board.my_pieces())
+            boardPieces['myPieces'] = myPieces
+            oppPieces = list(board.opponent_pieces())
+            boardPieces['oppPieces'] = oppPieces
+        
+            print('')
+            print('Hardcoded board on server side:')
+            print(json.dumps(boardPieces))
+            print('')
+
+            jsonObj = boardPieces
+            jsonObj['action'] = 'setBoardPieces'
+            jsonData = json.dumps(jsonObj)
+            self.sendMessage(jsonData.encode('utf8'), isBinary)
+            return
+
+
         # echo back message verbatim
         self.sendMessage(payload, isBinary)
 

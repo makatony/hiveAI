@@ -1,6 +1,8 @@
 var ws;
 var hexagons = [];
 var slider;
+var players = [];
+var pieceColors = ['#00FF00', '#FFFF00'];
 
 function setup() {
 	createCanvas(600,500);
@@ -8,8 +10,7 @@ function setup() {
 	
     ws = new WebSocket("ws://127.0.0.1:50007");
     ws.onmessage = function (evt) {
-		console.log(evt)
-        console.log(evt.data);
+		webSocketListener(evt);
     }
 	
 	slider = createSlider(0,100,30);
@@ -18,45 +19,47 @@ function setup() {
 	setHexSize(30);
 	
 	
-	createButton("GetBoardLayout").mousePressed(function () {
+	createButton("getBoardPieces from server").mousePressed(function () {
 		ws.send(JSON.stringify({
-			action: "getBoardLayout"
+			action: "getBoardPieces"
 		}));
 	});
 	
-	var hexData = [
-	[0,0],
-	[0,-1],
-	[1,-1],
-	[1,0],
-	[0,1],
-	[-1,0],
-	[-1,-1],
-	[2,0],
-	[3,0],
-	[-2,-1],
-	[-3,-1],
-	[-1,1],
-	[-2,1]
-	];
+	var initBoardLayout = {
+		"action": "setBoardLayout",
+		"myPieces": [
+			[-1,-1],
+			[2,0],
+			[3,0],
+			[-2,-1],
+			[-3,-1],
+			[-1,1],
+			[-2,1]
+		],
+		"oppPieces": [
+			[0,0],
+			[0,-1],
+			[1,-1],
+			[1,0],
+			[0,1],
+			[-1,0]
+		]
+	};
 	
-	
-	for (var i = 0; i < hexData.length; i++) {
-		var thisHex = new Hexagon(createVector(hexData[i][0],hexData[i][1]));
-		thisHex.updatePos();
-		thisHex.setCaption(i+"/"+hexData[i][0]+","+hexData[i][1]);
-		hexagons.push(thisHex);
-	}
+	myPlayer = new Player(0);
+	oppPlayer = new Player(1);
+	myPlayer.setPieces(initBoardLayout.myPieces);
+	oppPlayer.setPieces(initBoardLayout.oppPieces);
+	players.push(myPlayer);
+	players.push(oppPlayer);
 }
 
 
 function draw() {
 	background(0);
 	setHexSize(slider.value());
-	
-	for (var i = 0; i < hexagons.length; i++) {
-		hexagons[i].updatePos();
-		hexagons[i].draw();
+	for (var j = 0; j < players.length; j++) {
+		players[j].drawPieces();
 	}
 }
 
@@ -65,11 +68,15 @@ function Hexagon(gridPos) {
 	this.pos = translateGrid2Pos(this.gridPos);
 	this.caption = "";
 	
-	this.draw = function () {
+	this.draw = function (color) {
+		var col = color || 0;
 		// push();
 		// translate(this.pos);
 		// rotate(frameCount / -100.0);
+		push();
+		fill(col);
 		polygon(this.pos.x, this.pos.y, hexSize, 6);
+		pop();
 		push();
 		fill(0);
 		text(this.caption, this.pos.x, this.pos.y);
@@ -88,6 +95,39 @@ function Hexagon(gridPos) {
 		this.pos = translateGrid2Pos(this.gridPos);
 	}
 }
+
+function Player(id) {
+	this.pieces = [];
+	this.hexagons = [];
+	this.id = id || 0;
+
+	this.setPieces = function(pieces_a) {
+		if (pieces_a instanceof Array) {
+			this.pieces = pieces_a;
+			this.hexagons = [];
+		}
+		
+		for (var i = 0; i < this.pieces.length; i++) {
+			var thisHex = new Hexagon(createVector(this.pieces[i][0],this.pieces[i][1]));
+			thisHex.updatePos();
+			thisHex.setCaption(i+"/"+this.pieces[i][0]+","+this.pieces[i][1]);
+			this.hexagons.push(thisHex);
+		}
+	}
+	
+	this.drawPieces = function () {
+		for (var i = 0; i < this.hexagons.length; i++) {
+			this.hexagons[i].updatePos();
+			this.hexagons[i].draw(pieceColors[this.id]);
+		}
+	}
+}
+
+
+
+
+
+
 
 function translateGrid2Pos(grid) {
 	var xPos = grid.x*hexHoffset;
@@ -128,4 +168,19 @@ function setHexSize(size){
 function mouseWheel(event) {
   slider.value(slider.value()+event.delta/20)
   return false;
+}
+
+
+function webSocketListener(evt) {
+	json = JSON.parse(evt.data);
+	if (json.action == "setBoardPieces") {
+		if (players[0].id == 0) { // lots of assumptions here. works only for 2 players
+			players[0].setPieces(json.myPieces);
+			players[1].setPieces(json.oppPieces);
+		}
+		else {
+			players[1].setPieces(json.myPieces);
+			players[0].setPieces(json.oppPieces);
+		}
+	}
 }
