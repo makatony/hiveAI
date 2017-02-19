@@ -4,15 +4,17 @@ import re
 
 from state import *
 
+
 class UI:
     """Ascii UI, can be used for printing, etc."""
+
     def __init__(self, board, color=True):
         self.board = board
         self.color = color
-        self.min_x = min(x for x,_ in self.board.positions)
-        self.max_x = max(x for x,_ in self.board.positions)
-        self.min_y = min(y for _,y in self.board.positions)
-        self.max_y = max(y for _,y in self.board.positions)
+        self.min_x = min(x for x, _ in self.board.positions)
+        self.max_x = max(x for x, _ in self.board.positions)
+        self.min_y = min(y for _, y in self.board.positions)
+        self.max_y = max(y for _, y in self.board.positions)
 
         # Index board's valid moves.
         moves = {}
@@ -22,7 +24,11 @@ class UI:
                 moves[key] = [move[2]]
             else:
                 moves[key] += [move[2]]
-        self.moves = sorted(moves.items())
+        if moves:
+            self.moves = sorted(list(moves.items()),
+                                key=lambda m: (m[0][1], m[0][0]) if m[0][1] is not None else ((), m[0][0]))
+        else:
+            self.moves = None
 
     # Each position in the board are represent by so many lines and chars.
     LINES_PER_ROW = 4
@@ -65,8 +71,6 @@ class UI:
                 continue
             return (self.moves[ii][0][0], self.moves[ii][0][1], move_to)
 
-
-
     def _all_lines(self):
         for line in self._board_lines():
             yield line
@@ -77,7 +81,6 @@ class UI:
         yield self._player_turn_line()
         for line in self._player_moves_lines():
             yield line
-
 
     def _stack_lines(self):
         """Yields lines representing pieces available in stack."""
@@ -105,48 +108,51 @@ class UI:
         yield example
         yield '  (Note: if there is only one valid move for a piece, you can enter only the first number)'
 
-
     def _board_lines(self):
         """Yields lines of the printed board."""
         lines = []
-        for line_y in range(UI.LINES_PER_ROW * (self.max_y - self.min_y + 1) + math.floor(UI.LINES_PER_ROW/2)):
+        for line_y in range(UI.LINES_PER_ROW * (self.max_y - self.min_y + 1) + math.floor(UI.LINES_PER_ROW / 2)):
             yield self._board_line(line_y)
 
     def _board_line(self, line_y):
         """Yields one line of the printed board: relative to self.min_y."""
         strips = []
         if self.min_y % 2 == 1:
-            line_y -= math.floor(UI.LINES_PER_ROW/2)
-        for x in range(self.min_x, self.max_x+2):
+            line_y -= math.floor(UI.LINES_PER_ROW / 2)
+        for x in range(self.min_x, self.max_x + 2):
             adj_line_y = line_y
-            if x % 2 == 1: 
-                adj_line_y = line_y - math.floor(UI.LINES_PER_ROW/2)
-            y = math.floor(adj_line_y/UI.LINES_PER_ROW)
-            piece = None            
-            if (x,y) in self.board.positions:
-                piece = self.board.positions[(x,y)]
+            if x % 2 == 1:
+                adj_line_y = line_y - math.floor(UI.LINES_PER_ROW / 2)
+            y = math.floor(adj_line_y / UI.LINES_PER_ROW)
+            piece = None
+            if (x, y) in self.board.positions:
+                piece = self.board.positions[(x, y)]
             sub_y = adj_line_y % UI.LINES_PER_ROW
-            strips += [self._board_strip(piece, x, y, sub_y, is_final=(x==self.max_x+1))]
+            strips += [self._board_strip(piece, x, y, sub_y, is_final=(x == self.max_x + 1))]
         return ''.join(strips)
 
     def _board_strip(self, piece, x, y, sub_y, is_final):
         """Yields a strip related to the given x column of a line of the board."""
         if sub_y == 0:
-            if is_final: return ' /'
-            return ' /'+(UI.CHARS_PER_COLUMN-2)*' '
+            if is_final:
+                return ' /'
+            return ' /' + (UI.CHARS_PER_COLUMN - 2) * ' '
         elif sub_y == 1:
-            if is_final: return '/'
-            coord = "%d,%d" % (x,y)
-            return ('/ {:^' + str(UI.CHARS_PER_COLUMN-2) + '}').format(coord)
+            if is_final:
+                return '/'
+            coord = "%d,%d" % (x, y)
+            return ('/ {:^' + str(UI.CHARS_PER_COLUMN - 2) + '}').format(coord)
         elif sub_y == 2:
-            if is_final: return '\\'
+            if is_final:
+                return '\\'
             if piece is None:
-                return '\\ '+(UI.CHARS_PER_COLUMN-2)*' '
+                return '\\ ' + (UI.CHARS_PER_COLUMN - 2) * ' '
             else:
-                if is_final: return ' \\'
-                return ('\\ {:}{:^'+str(UI.CHARS_PER_COLUMN-2)+'}{:}').format(self._color_start(piece),piece.insect,self._color_end())                
+                if is_final:
+                    return ' \\'
+                return ('\\ {:}{:^' + str(UI.CHARS_PER_COLUMN - 2) + '}{:}').format(self._color_start(piece), piece.insect, self._color_end())
         else:
-            return ' \\'+(UI.CHARS_PER_COLUMN-2)*'_'
+            return ' \\' + (UI.CHARS_PER_COLUMN - 2) * '_'
 
     def _color_start(self, piece):
         """Sets the color of a piece."""

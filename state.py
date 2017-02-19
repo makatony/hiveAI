@@ -10,10 +10,12 @@ PLAYERS = 2
 
 
 class Board:
-    def __init__(self, positions = {}):
+
+    def __init__(self, positions={}):
         """Create a new board with specified positions of the pieces"""
         # stack of available pieces: player number -> (insect -> count)
-        self.stack = dict((player, { ANT: 3, BEETLE: 2, GRASSHOPPER: 3, QUEEN: 1, SPIDER: 2 }) for player in range(PLAYERS))
+        self.stack = dict((player, {ANT: 3, BEETLE: 2, GRASSHOPPER: 3, QUEEN: 1, SPIDER: 2})
+                          for player in range(PLAYERS))
 
         # map of position: (x,y) -> Piece
         self.positions = positions
@@ -22,9 +24,7 @@ class Board:
 
         # next player number
         self.next_player = 0
-
-#    def valid_moves(self, position):
-#        return set()
+        self.check_moves = False
 
     def valid_moves(self):
         """Yields tuple (insect, source_position, target_position) for each valid move."""
@@ -48,56 +48,77 @@ class Board:
         for src_position, piece in self.positions.items():
             if piece.player != self.next_player:
                 continue
-            if not self.removable(src_position):
+            if not self.is_removable(src_position):
                 continue
 
             tgt_positions = []
             if piece.insect == QUEEN:
                 tgt_positions = self.queen_moves(src_position)
-            
+            elif piece.insect == SPIDER:
+                tgt_positions = self.spider_moves(src_position)
+
             # We have the piece and the target positions, just
             # enumerate them.
             for tgt_position in tgt_positions:
                 yield (piece.insect, src_position, tgt_position)
 
-    def queen_moves(self, src_position):
-        """Enumerate queen's move from src_position, assuming she can move."""
-        return self.valid_next_steps(src_position, original_position=src_position, invalid=set(src_position))
+    def move(self, insect, src_position, tgt_position):
+        """Move insect from src_position to tgt_position. Set src_position=None for initial placment."""
+        if self.check_moves:
+            if not (insect, src_position, tgt_position) in list(self.valid_moves()):
+                raise ValueError("Move (%s,%s,%s) is not valid. Possible moves are: " %
+                                 (insect, src_position, tgt_position, list(self.valid_moves())))
 
+        if src_position in None:
+            if not self.stack[piece.player][piece.insect]:
+                raise ValueError("No %s piece left to place" % insect)
+            self.stack[piece.player][piece.insect] = self.stack[piece.player][piece.insect] - 1
 
-    def removable(self, position):
+        else:
+            # TODO(): normal move.
+            pass
+
+        # Switch players.
+        self.next_player = 1 - self.next_player
+
+    def is_removable(self, position):
         """Determine whether a piece on specified position is removable without splitting the hive."""
-        #TODO: check if beetle is on top of anything, if that is the case, then it's removable.
+        # TODO: check if beetle is on top of anything, if that is the case, then it's removable.
 
         start_neighbours = list(self.occupied_neighbours(position))
 
         # Trivial cases: only one neighbor; and 5 or 6 neighbors, in which case they will forceabley
-        # stay connected. 
+        # stay connected.
         if len(start_neighbours) < 2 or len(start_neighbours) > 4:
             return True
 
-        # Starting from one of the neighbors (start_neighbours[0]), all other have to be reached. 
+        # print("start_neighbours=%s" % start_neighbours)
+
+        # Starting from one of the neighbors (start_neighbours[0]), all other have to be reached.
         visited = set()
         visited.add(position)
 
         # temaining is the list of pieces we need to reach to prove that the graph will still be
         # connected.
-        remaining = set(start_neighbours[:1])
+        remaining = set(start_neighbours[1:])
 
         # to_visit is the next list of nodes to visit in our BFS.
         to_visit = set((start_neighbours[0],))
         while to_visit:
+            # print("remaining=%s" % remaining)
+            # print("to_visit=%s" % to_visit)
+            # print("visited=%s" % visited)
             new_to_visit = set()
             for visit in to_visit:
                 for position in self.occupied_neighbours(visit):
                     if position in visited:
                         continue
-                    visited.add((position,))
+                    visited.add(position)
                     if position in remaining:
                         remaining.remove(position)
                         if not remaining:
                             return True
-                    new_to_visit.update((position,))
+                    new_to_visit.add(position)
             to_visit = new_to_visit
         return False
 
@@ -105,11 +126,11 @@ class Board:
         """Return tuple with valid placements for a new piece. These are connected placements not neighbouring any opponent's pieces."""
         # Trivial case: first piece in play:
         if len(self.positions) == 0:
-            return ((0,0),)
+            return ((0, 0),)
 
         # Second trivial case: second piece in play:
         if len(self.positions) == 1:
-            return self.neighbours((0,0))
+            return self.neighbours((0, 0))
 
         # Gather all empty spaces connected to friendly pieces.
         connected = set()
@@ -136,36 +157,67 @@ class Board:
         """Neighbouring positions with opponent's piece"""
         return (pos for pos in self.occupied_neighbours(position) if self.positions[pos].player != self.next_player)
 
+    def is_occupied(self, position):
+        return position in self.positions
+
+    def is_empty(self, position):
+        return position not in self.positions
+
     def occupied_neighbours(self, position):
         """Neighbouring positions with a piece"""
-        return (pos for pos in self.neighbours(position) if pos in self.positions)
+        return (pos for pos in self.neighbours(position) if self.is_occupied(pos))
 
     def empty_neighbours(self, position):
         """Neighbouring positions without a piece"""
-        return (pos for pos in self.neighbours(position) if pos not in self.positions)
+        return (pos for pos in self.neighbours(position) if self.is_empty(pos))
 
-    def valid_next_steps(self, src_position, original_position, invalid):
+    def empty_and_connected_neighbours(self, src_position, original_position, invalid):
         """Returns neighbouring positions that are empty but still connected to the graph.
 
-        TODO: Check that piece is not "squeezing" through two other pieces.
-        Args;
-          position: where to search for the neighboors.
-          original_position: where the piece is going to leave from, presumably will be 
-            empty and therefore can't be used for invalid is a list of positions not valid to move to, and that shouldn't be
-        considered for connectedness (presumably where the )...
-        """
-        for empty_pos in self.empty_neighbours(src_position):
-            if empty_pos in invalid:
-                continue
-            for occupied_pos in self.occupied_neighbours(empty_pos):
-                if occupied_pos != original_position:
-                    # This position is connected, yield it and move to the next empty_pos
-                    yield empty_pos
-                    break
+        It also checks that piece is not "squeezing" through two other pieces.
 
+        Args;
+          src_position: from where this move starts.
+          original_position: where the piece is going to leave from: this is equal to
+            src_position for the first step of a piece, and then something different 
+            later on. Presumably will be empty and therefore can't be considered as
+            an occupied neighboor.
+          invalid: don't consider these positions.
+        """
+        neighbours = self.neighbours(src_position)
+        occupied = [(self.is_occupied(pos) and pos != original_position) for pos in neighbours]
+        n = len(neighbours)
+
+        for ii in range(len(neighbours)):
+            tgt_pos = neighbours[ii]
+
+            if tgt_pos in invalid:
+                continue
+
+            if occupied[ii]:
+                # Target destination must be empty.
+                continue
+
+            if occupied[(ii + 1) % n] and occupied[(ii - 1) % n]:
+                # Squeeze between two pieces is not allowed.
+                continue
+
+            is_connected = False
+            for connected_pos in self.neighbours(tgt_pos):
+                if connected_pos == src_position or connected_pos == original_position:
+                    # src_position and original_position are supposed to be empty.
+                    continue
+                if self.is_occupied(connected_pos):
+                    # All good, position is connected, we only need one position.
+                    is_connected = True
+                    break
+            if not is_connected:
+                continue
+
+            yield tgt_pos
 
     def neighbours(self, position):
-        """Valid neighbouring positions"""
+        """Valid neighbouring positions, in circular order."""
         (x, y) = position
         if x % 2 == 0:
             return [(x, y - 1), (x + 1, y - 1), (x + 1, y), (x, y + 1), (x - 1, y), (x - 1, y - 1)]
@@ -175,13 +227,36 @@ class Board:
     def __str__(self):
         return "not implemented"
 
+    def queen_moves(self, src_position):
+        """Enumerate queen's move from src_position, assuming she can move."""
+        return self.empty_and_connected_neighbours(src_position, original_position=src_position, invalid=set([src_position]))
+
+    def spider_moves(self, src_position):
+        """Enumerate spider's moves from src_position: it must make 3 steps."""
+        end_pos = set()
+        path = [src_position]
+        self._spider_moves_dfs(src_position, src_position, 3, end_pos, path)
+        for pos in end_pos:
+            yield(pos)
+
+    def _spider_moves_dfs(self, src_position, original_position, depth, end_pos, path):
+        depth -= 1
+        if depth == 0:
+            # Leaves of the DFS: these will the candidate end positions.
+            for next_pos in self.empty_and_connected_neighbours(src_position, original_position, invalid=path):
+                end_pos.add(next_pos)
+        else:
+            for next_pos in self.empty_and_connected_neighbours(src_position, original_position, invalid=path):
+                path += [next_pos]
+                self._spider_moves_dfs(next_pos, original_position, depth, end_pos, path)
+                path.pop()
+
 
 class Piece:
-    def  __init__(self, insect, player):
+
+    def __init__(self, insect, player):
         # Insect
         self.insect = insect
-    
-        # Player number 
+
+        # Player number
         self.player = player
-
-
