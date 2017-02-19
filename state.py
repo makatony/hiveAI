@@ -10,6 +10,8 @@ PLAYERS = 2
 
 
 class Board:
+    # We are playing on an hexagon-tiled map.
+    NUM_NEIGHBOURS = 6
 
     def __init__(self, positions={}):
         """Create a new board with specified positions of the pieces"""
@@ -28,6 +30,8 @@ class Board:
 
     def valid_moves(self):
         """Yields tuple (insect, source_position, target_position) for each valid move."""
+        # TODO: add support for no available move.
+
         # New placements.
         new_placements = None
         player_stack = self.stack[self.next_player]
@@ -52,10 +56,14 @@ class Board:
                 continue
 
             tgt_positions = []
-            if piece.insect == QUEEN:
+            if piece.insect == ANT:
+                tgt_positions = self.ant_moves(src_position)
+            elif piece.insect == QUEEN:
                 tgt_positions = self.queen_moves(src_position)
             elif piece.insect == SPIDER:
                 tgt_positions = self.spider_moves(src_position)
+            elif piece.insect == GRASSHOPPER:
+                tgt_positions = self.grasshopper_moves(src_position)
 
             # We have the piece and the target positions, just
             # enumerate them.
@@ -105,9 +113,6 @@ class Board:
         # to_visit is the next list of nodes to visit in our BFS.
         to_visit = set((start_neighbours[0],))
         while to_visit:
-            # print("remaining=%s" % remaining)
-            # print("to_visit=%s" % to_visit)
-            # print("visited=%s" % visited)
             new_to_visit = set()
             for visit in to_visit:
                 for position in self.occupied_neighbours(visit):
@@ -179,14 +184,13 @@ class Board:
         Args;
           src_position: from where this move starts.
           original_position: where the piece is going to leave from: this is equal to
-            src_position for the first step of a piece, and then something different 
+            src_position for the first step of a piece, and then something different
             later on. Presumably will be empty and therefore can't be considered as
             an occupied neighboor.
           invalid: don't consider these positions.
         """
         neighbours = self.neighbours(src_position)
         occupied = [(self.is_occupied(pos) and pos != original_position) for pos in neighbours]
-        n = len(neighbours)
 
         for ii in range(len(neighbours)):
             tgt_pos = neighbours[ii]
@@ -198,7 +202,7 @@ class Board:
                 # Target destination must be empty.
                 continue
 
-            if occupied[(ii + 1) % n] and occupied[(ii - 1) % n]:
+            if occupied[(ii + 1) % Board.NUM_NEIGHBOURS] and occupied[(ii - 1) % Board.NUM_NEIGHBOURS]:
                 # Squeeze between two pieces is not allowed.
                 continue
 
@@ -250,6 +254,37 @@ class Board:
                 path += [next_pos]
                 self._spider_moves_dfs(next_pos, original_position, depth, end_pos, path)
                 path.pop()
+
+    def grasshopper_moves(self, src_position):
+        for direction in range(Board.NUM_NEIGHBOURS):
+            steps, tgt_pos = self._grasshopper_next_free(src_position, direction)
+            if steps > 1:
+                yield(tgt_pos)
+
+    def _grasshopper_next_free(self, src_position, direction):
+        steps = 0
+        next_pos = src_position
+        while self.is_occupied(next_pos):
+            next_pos = self.neighbours(next_pos)[direction]
+            steps += 1
+        return steps, next_pos
+
+    def ant_moves(self, src_position):
+        # to_visit is the next list of nodes to visit in our BFS.
+        to_visit = set((src_position,))
+        visited = set((src_position,))
+        while to_visit:
+            new_to_visit = set()
+            for visit_pos in to_visit:
+                visited.add(visit_pos)
+                for next_visit in self.empty_and_connected_neighbours(visit_pos, src_position, invalid=[]):
+                    if next_visit in visited or next_visit in to_visit:
+                        continue
+                    new_to_visit.add(next_visit)
+            to_visit = new_to_visit
+        for pos in visited:
+            if pos != src_position:
+                yield pos
 
 
 class Piece:

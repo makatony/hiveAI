@@ -104,7 +104,7 @@ class UI:
                 move_to = self.moves[ii][1][0]
                 example = '  Example: to %s%s, type "%d %d,%d"' % (
                     src, move_to, ii, move_to[0], move_to[1])
-            yield '  [%d] %s%s' % (ii, src, self.moves[ii][1])
+            yield '  [%d] %s%s' % (ii, src, sorted(self.moves[ii][1]))
         yield example
         yield '  (Note: if there is only one valid move for a piece, you can enter only the first number)'
 
