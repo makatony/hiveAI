@@ -111,27 +111,35 @@ class UI:
     def _board_lines(self):
         """Yields lines of the printed board."""
         lines = []
-        for line_y in range(UI.LINES_PER_ROW * (self.max_y - self.min_y + 1) + math.floor(UI.LINES_PER_ROW / 2)):
+        from_line = self.min_y * UI.LINES_PER_ROW
+        if self.min_y % 2 == 0:
+            from_line -= math.floor(UI.LINES_PER_ROW / 2)
+        to_line = (self.max_y + 1) * UI.LINES_PER_ROW
+        if self.max_y % 2 == 0:
+            to_line += math.floor(UI.LINES_PER_ROW / 2)
+        print("min_y, max_y=[{}, {}], lines=[{},{}]".format(self.min_y, self.max_y, from_line, to_line))
+        for line_y in range(from_line, to_line):
             yield self._board_line(line_y)
 
     def _board_line(self, line_y):
         """Yields one line of the printed board: relative to self.min_y."""
         strips = []
-        if self.min_y % 2 == 1:
-            line_y -= math.floor(UI.LINES_PER_ROW / 2)
         for x in range(self.min_x, self.max_x + 2):
             adj_line_y = line_y
             if x % 2 == 1:
                 adj_line_y = line_y - math.floor(UI.LINES_PER_ROW / 2)
             y = math.floor(adj_line_y / UI.LINES_PER_ROW)
             piece = None
+            covered = None
             if (x, y) in self.board.positions:
                 piece = self.board.positions[(x, y)]
+                if self.board.is_on_top((x, y)):
+                    covered = self.board.covered[(x, y)]
             sub_y = adj_line_y % UI.LINES_PER_ROW
-            strips += [self._board_strip(piece, x, y, sub_y, is_final=(x == self.max_x + 1))]
+            strips += [self._board_strip(piece, covered, x, y, sub_y, is_final=(x == self.max_x + 1))]
         return ''.join(strips)
 
-    def _board_strip(self, piece, x, y, sub_y, is_final):
+    def _board_strip(self, piece, covered, x, y, sub_y, is_final):
         """Yields a strip related to the given x column of a line of the board."""
         if sub_y == 0:
             if is_final:
@@ -150,9 +158,25 @@ class UI:
             else:
                 if is_final:
                     return ' \\'
-                return ('\\ {:}{:^' + str(UI.CHARS_PER_COLUMN - 2) + '}{:}').format(self._color_start(piece), piece.insect, self._color_end())
+                if covered is None:
+                    # Single piece.
+                    return ('\\ {:}{:^' + str(UI.CHARS_PER_COLUMN - 2) + '}{:}'
+                            ).format(self._color_start(piece), piece.insect, self._color_end())
+                else:
+                    return '\\ {}'.format(self._covered_pieces(piece, covered, UI.CHARS_PER_COLUMN - 2))
         else:
             return ' \\' + (UI.CHARS_PER_COLUMN - 2) * '_'
+
+    def _covered_pieces(self, piece, covered, width):
+        """Returns a colored strip of up to width chars with piece and covered pieces."""
+        chars_used = 1 + 2 + len(covered)  # Piece + parenthesis + 1 per covered.
+        right_margin = max(math.floor((width - chars_used) / 2), 0)
+        left_margin = max(width - (chars_used + right_margin), 0)
+        str = '{}{}{}({}'.format(self._color_start(piece), ' ' * left_margin, piece.insect, self._color_end())
+        for covered_piece in reversed(covered):
+            str += '{}{}{}'.format(self._color_start(covered_piece), covered_piece.insect, self._color_end())
+        str += '{}){}{}'.format(self._color_start(piece), ' ' * right_margin, self._color_end())
+        return str
 
     def _color_start(self, piece):
         """Sets the color of a piece."""

@@ -13,8 +13,18 @@ class Board:
     # We are playing on an hexagon-tiled map.
     NUM_NEIGHBOURS = 6
 
-    def __init__(self, positions={}):
-        """Create a new board with specified positions of the pieces"""
+    def __init__(self, positions={}, covered={}):
+        """Create a new board with specified positions of the pieces.
+
+        Args:
+            positions: map of position (x,y) to Piece object. Each piece 
+              provided will be automatically removed from the number of  
+              available pieces to add to the board. 
+            covered: this is a map of position (x,y) to a list of covered
+              Piece objects (bottom-to-top). Covered Pieces happen when
+              a Beetle move on top of them, in which case they are blocked
+              and can't move, until the beetle moves.
+        """
         # stack of available pieces: player number -> (insect -> count)
         self.stack = dict((player, {ANT: 3, BEETLE: 2, GRASSHOPPER: 3, QUEEN: 1, SPIDER: 2})
                           for player in range(PLAYERS))
@@ -23,6 +33,13 @@ class Board:
         self.positions = positions
         for position, piece in positions.items():
             self.stack[piece.player][piece.insect] = max(self.stack[piece.player][piece.insect] - 1, 0)
+
+        # map of covered pieces: (x,y) -> Ordered (bottom-to-top) list of
+        #   covered pieces.
+        self.covered = covered
+        for position, pieces in covered.items():
+            for piece in pieces:
+                self.stack[piece.player][piece.insect] = max(self.stack[piece.player][piece.insect] - 1, 0)
 
         # next player number
         self.next_player = 0
@@ -64,6 +81,8 @@ class Board:
                 tgt_positions = self.spider_moves(src_position)
             elif piece.insect == GRASSHOPPER:
                 tgt_positions = self.grasshopper_moves(src_position)
+            elif piece.insect == BEETLE:
+                tgt_positions = self.beetle_moves(src_position)
 
             # We have the piece and the target positions, just
             # enumerate them.
@@ -89,9 +108,19 @@ class Board:
         # Switch players.
         self.next_player = 1 - self.next_player
 
+    def neighbours(self, position):
+        """Valid neighbouring positions, in circular order."""
+        (x, y) = position
+        if x % 2 == 0:
+            return [(x, y - 1), (x + 1, y - 1), (x + 1, y), (x, y + 1), (x - 1, y), (x - 1, y - 1)]
+        else:
+            return [(x, y - 1), (x + 1, y), (x + 1, y + 1), (x, y + 1), (x - 1, y + 1), (x - 1, y)]
+
     def is_removable(self, position):
         """Determine whether a piece on specified position is removable without splitting the hive."""
-        # TODO: check if beetle is on top of anything, if that is the case, then it's removable.
+        if self.is_on_top(position):
+            # If there is a piece underneath, the top piece is always removable.
+            return True
 
         start_neighbours = list(self.occupied_neighbours(position))
 
@@ -168,6 +197,9 @@ class Board:
     def is_empty(self, position):
         return position not in self.positions
 
+    def is_on_top(self, position):
+        return position in self.covered and self.covered[position]
+
     def occupied_neighbours(self, position):
         """Neighbouring positions with a piece"""
         return (pos for pos in self.neighbours(position) if self.is_occupied(pos))
@@ -219,14 +251,6 @@ class Board:
                 continue
 
             yield tgt_pos
-
-    def neighbours(self, position):
-        """Valid neighbouring positions, in circular order."""
-        (x, y) = position
-        if x % 2 == 0:
-            return [(x, y - 1), (x + 1, y - 1), (x + 1, y), (x, y + 1), (x - 1, y), (x - 1, y - 1)]
-        else:
-            return [(x, y - 1), (x + 1, y), (x + 1, y + 1), (x, y + 1), (x - 1, y + 1), (x - 1, y)]
 
     def __str__(self):
         return "not implemented"
@@ -285,6 +309,23 @@ class Board:
         for pos in visited:
             if pos != src_position:
                 yield pos
+
+    def beetle_moves(self, src_position):
+        """Enumerate beetle's move from src_position, assuming it can move."""
+        # If on top of a piece, it can move anywhere.
+        if self.is_on_top(src_position):
+            for pos in self.neighbours(src_position):
+                yield pos
+            return
+
+        # It can always move on top of any neightbour.
+        for pos in self.occupied_neighbours(src_position):
+            yield pos
+
+        # And it moves like the queen: notice that if not moving from the top,
+        # it can't squeeze between pieces either.
+        for pos in self.empty_and_connected_neighbours(src_position, original_position=src_position, invalid=set([src_position])):
+            yield pos
 
 
 class Piece:
