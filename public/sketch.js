@@ -1,8 +1,8 @@
 var ws;
-var hexagons = [];
 var slider;
 var boards = [];
 var pieceColors = ['#00FF00', '#FFFF00'];
+var draggingPiece;
 
 function setup() {
 	createCanvas(600,500);
@@ -111,38 +111,7 @@ function draw() {
 	boards[0].drawPieces(); //assuming we only have one board
 }
 
-function Hexagon(gridPos) {
-	this.gridPos = gridPos || createVector(0,0);
-	this.pos = translateGrid2Pos(this.gridPos);
-	this.caption = "";
-	
-	this.draw = function (color) {
-		var col = color || 0;
-		// push();
-		// translate(this.pos);
-		// rotate(frameCount / -100.0);
-		push();
-		fill(col);
-		polygon(this.pos.x, this.pos.y, hexSize, 6);
-		pop();
-		push();
-		fill(0);
-		text(this.caption, this.pos.x, this.pos.y);
-		pop();
-	}
-	
-	this.setPos = function(position) {
-		this.pos = position || createVector(width*0.5, height*0.5);
-	}
-	
-	this.setCaption = function (cap) {
-		this.caption = cap;
-	}
-	
-	this.updatePos = function () {
-		this.pos = translateGrid2Pos(this.gridPos);
-	}
-}
+
 
 function Board() { // [{"row": 0,"col": 1,"player": 0,"insect": "S"},{....}]
 	this.pieces = [];
@@ -176,12 +145,44 @@ function Piece(insect,col,row,playerId) {
 	}
 	
 	this.drawHexagon = function () {
-		this.hexagon.updatePos();
+		if (this != draggingPiece) this.hexagon.updatePos(); // only snap the hexagon back to grid when this piece is not being dragged
 		this.hexagon.draw(pieceColors[this.playerId]);
 	}
 	
 }
 
+function Hexagon(gridPos) {
+	this.gridPos = gridPos || createVector(0,0);
+	this.pos = translateGrid2Pos(this.gridPos);
+	this.caption = "";
+	
+	this.draw = function (color) {
+		var col = color || 0;
+		// push();
+		// translate(this.pos);
+		// rotate(frameCount / -100.0);
+		push();
+		fill(col);
+		polygon(this.pos.x, this.pos.y, hexSize, 6);
+		pop();
+		push();
+		fill(0);
+		text(this.caption, this.pos.x, this.pos.y);
+		pop();
+	}
+	
+	this.setPos = function(position) {
+		this.pos = position || createVector(width*0.5, height*0.5);
+	}
+	
+	this.setCaption = function (cap) {
+		this.caption = cap;
+	}
+	
+	this.updatePos = function () {
+		this.pos = translateGrid2Pos(this.gridPos);
+	}
+}
 
 function translateGrid2Pos(grid) {
 	var xPos = grid.x*hexHoffset;
@@ -210,6 +211,16 @@ function polygon(x, y, radius, npoints) {
   endShape(CLOSE);
 }
 
+function isInsideHex(hexagon) {
+	var hori = hexWidth/4;
+	var vert = hexHeight/2;
+	var h = hexagon;
+	var q2x = Math.abs(mouseX - h.pos.x);			// transform the test point locally and to quadrant 2
+	var q2y = Math.abs(mouseY - h.pos.y);			// transform the test point locally and to quadrant 2
+	if ((q2x > hori*2) || (q2y > vert)) return false;			// bounding test (since q2 is in quadrant 2 only 2 tests are needed)
+	return vert * 2 * hori - vert * q2x - 2 * hori * q2y >= 0;	// finally the dot product can be reduced to this due to the hexagon symmetry
+}
+
 function setHexSize(size){
 	hexSize = size;
 	hexWidth = hexSize * 2;
@@ -223,6 +234,48 @@ function mouseWheel(event) {
   slider.value(slider.value()+event.delta/20)
   return false;
 }
+
+
+function mouseDragged(event) {
+	
+  if (draggingPiece instanceof Piece) { //if a piece is being dragged, update it's hexagon's pixels
+	  if (isInsideHex(draggingPiece.hexagon)) {
+		  draggingPiece.hexagon.pos = createVector(mouseX,mouseY);
+	  }
+	  else { // if mouse is not inside any hexagon anymore, reset
+		draggingPiece.hexagon.updatePos();
+		draggingPiece = undefined;
+	  }
+  }
+  else {  //if no piece yet in dragging, check if mouse is over a piece
+		// source http://www.playchilla.com/how-to-check-if-a-point-is-inside-a-hexagon
+		
+		pieces = boards[0].pieces; // assumption of only one board
+		
+		var mouseInsideAnyHex = false;
+		
+		for (var i = 0; i < pieces.length; i++) {
+			if (isInsideHex(pieces[i].hexagon))	{
+				draggingPiece = pieces[i];
+				mouseInsideAnyHex = true;
+				
+				/* painting the hexagonal shape
+				noLoop();
+				var colorR = map (pieces[i].gridPos.x,-3,3,0,255);
+				var colorG = map (pieces[i].gridPos.y,-3,3,0,255);
+				fill(colorR,colorG,0);
+				noStroke();
+				ellipse(mouseX,mouseY,5,5);
+				// console.log(pieces[i].gridPos.x+"/"+pieces[i].gridPos.y);
+				*/
+			}
+		}
+
+	}
+	return false;
+}
+
+
 
 
 function webSocketListener(evt) {
