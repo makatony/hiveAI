@@ -1,7 +1,7 @@
 var ws;
 var hexagons = [];
 var slider;
-var players = [];
+var boards = [];
 var pieceColors = ['#00FF00', '#FFFF00'];
 
 function setup() {
@@ -25,6 +25,54 @@ function setup() {
 		}));
 	});
 	
+	var boardPieces = [
+        {
+            "row": -1,"col": -1,"player": 0,"insect": "S"
+        },
+        {
+            "row": 2,"col": 0,"player": 0,"insect": "A"
+        },
+        {
+            "row": 3,"col": 0,"player": 0,"insect": "Q"
+        },
+        {
+            "row": -2,"col": -1,"player": 0,"insect": "B"
+        },
+        {
+            "row": -3,"col": -1,"player": 0,"insect": "A"
+        },
+        {
+            "row": -1,"col": 1,"player": 0,"insect": "A"
+        },
+        {
+            "row": -2,"col": 1,"player": 0,"insect": "A"
+        },
+        {
+            "row": 0,"col": 0,"player": 1,"insect": "B"
+        },
+        {
+            "row": 0,"col": -1,"player": 1,"insect": "G"
+        },
+        {
+            "row": 1,"col": -1,"player": 1,"insect": "A"
+        },
+        {
+            "row": 1,"col": 0,"player": 1,"insect": "A"
+        },
+        {
+            "row": 0,"col": 1,"player": 1,"insect": "A"
+        },
+        {
+            "row": -1,"col": 0,"player": 1,"insect": "Q"
+        }
+    ];
+	
+	var board = new Board();
+	board.resetBoardPieces(boardPieces);
+	boards.push(board);
+	
+	
+	/*
 	var initBoardLayout = {
 		"action": "setBoardLayout",
 		"myPieces": [
@@ -52,15 +100,15 @@ function setup() {
 	oppPlayer.setPieces(initBoardLayout.oppPieces);
 	players.push(myPlayer);
 	players.push(oppPlayer);
+	*/
 }
 
 
 function draw() {
 	background(0);
 	setHexSize(slider.value());
-	for (var j = 0; j < players.length; j++) {
-		players[j].drawPieces();
-	}
+	
+	boards[0].drawPieces(); //assuming we only have one board
 }
 
 function Hexagon(gridPos) {
@@ -96,37 +144,43 @@ function Hexagon(gridPos) {
 	}
 }
 
-function Player(id) {
+function Board() { // [{"row": 0,"col": 1,"player": 0,"insect": "S"},{....}]
 	this.pieces = [];
-	this.hexagons = [];
-	this.id = id || 0;
-
-	this.setPieces = function(pieces_a) {
-		if (pieces_a instanceof Array) {
-			this.pieces = pieces_a;
-			this.hexagons = [];
+	
+	this.resetBoardPieces = function(boardPieces_a) {
+		this.pieces = [];
+		for (var i = 0; i < boardPieces_a.length; i++) {
+			var p = boardPieces_a[i];
+			var thisPiece = new Piece(p.insect,p.col,p.row,p.player)
+			thisPiece.setHexagon(thisPiece.gridPos);
+			this.pieces.push(thisPiece);
 		}
-		
-		for (var i = 0; i < this.pieces.length; i++) {
-			var thisHex = new Hexagon(createVector(this.pieces[i][0],this.pieces[i][1]));
-			thisHex.updatePos();
-			thisHex.setCaption(i+"/"+this.pieces[i][0]+","+this.pieces[i][1]);
-			this.hexagons.push(thisHex);
-		}
-	}
+	}	
 	
 	this.drawPieces = function () {
-		for (var i = 0; i < this.hexagons.length; i++) {
-			this.hexagons[i].updatePos();
-			this.hexagons[i].draw(pieceColors[this.id]);
+		for (var i = 0; i < this.pieces.length; i++) {
+			this.pieces[i].drawHexagon();
 		}
 	}
 }
 
-
-
-
-
+function Piece(insect,col,row,playerId) {
+	this.insect = insect||'n/a';
+	this.gridPos = createVector(col||0,row||0); // grid-position is a vector described in COLUMN and ROW
+	this.playerId = playerId||0;	// 0 = me ; 1 = AI opponent
+	
+	this.setHexagon = function(gridPos) {
+		this.hexagon = new Hexagon(gridPos);
+		this.hexagon.updatePos(); // hexagon's pos is described in PIXELS. so the gridPos needs to be translated to pixels
+		this.hexagon.setCaption(this.insect+" / "+this.gridPos.x+","+this.gridPos.y);
+	}
+	
+	this.drawHexagon = function () {
+		this.hexagon.updatePos();
+		this.hexagon.draw(pieceColors[this.playerId]);
+	}
+	
+}
 
 
 function translateGrid2Pos(grid) {
@@ -173,14 +227,11 @@ function mouseWheel(event) {
 
 function webSocketListener(evt) {
 	json = JSON.parse(evt.data);
+	// console.log(JSON.stringify(json,null,0))
 	if (json.action == "setBoardPieces") {
-		if (players[0].id == 0) { // lots of assumptions here. works only for 2 players
-			players[0].setPieces(json.myPieces);
-			players[1].setPieces(json.oppPieces);
-		}
-		else {
-			players[1].setPieces(json.myPieces);
-			players[0].setPieces(json.oppPieces);
-		}
+		boards[0].resetBoardPieces(json.boardPieces); // ssuming only one board
+		
+		//TODO: there are pieces missing in boardPieces. in server.py the board.positions only shows the visible pieces, not the pieces under the beetles
+		//as per Jan: board.covered is a dict of position -> list of pieces ; in order bottom-to-top piece ; only the very top piece is stored in board.positions
 	}
 }
