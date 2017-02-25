@@ -92,18 +92,45 @@ class Board:
     def move(self, insect, src_position, tgt_position):
         """Move insect from src_position to tgt_position. Set src_position=None for initial placment."""
         if self.check_moves:
-            if not (insect, src_position, tgt_position) in list(self.valid_moves()):
+            valid = list(self.valid_moves())
+            if not (insect, src_position, tgt_position) in valid:
                 raise ValueError("Move (%s,%s,%s) is not valid. Possible moves are: " %
-                                 (insect, src_position, tgt_position, list(self.valid_moves())))
+                                 (insect, src_position, tgt_position, valid))
 
         if src_position in None:
             if not self.stack[piece.player][piece.insect]:
                 raise ValueError("No %s piece left to place" % insect)
-            self.stack[piece.player][piece.insect] = self.stack[piece.player][piece.insect] - 1
+            self.stack[piece.player][piece.insect] -= 1
+            piece = Piece(insect, self.next_player)
 
         else:
-            # TODO(): normal move.
-            pass
+            # Leaving from src_position.
+            if self.is_empty(src_position):
+                raise ValueError("no piece in {}".format(src_position))
+            if self.positions[src_position].insect != insect:
+                raise ValueError(
+                    "piece in {} is not a {}, instead it is a {}".format(
+                        src_position,insect, self.positions[src_position].insect))
+            if self.positions[src_position].player != self.next_player:
+                raise ValueError(
+                    "instect {} in {} does not belong to player {}".format(
+                        insect, src_position, self.next_player))
+
+            piece = self.positions[src_position]
+            if src_position in self.covered:
+                self.positions[src_position] = self.covered[src_position].pop()
+                if not self.covered[src_position]:
+                    self.covered.pop(src_position)
+            else:
+                self.positions.pop(src_position)
+
+        # Move piece to new location.
+        if tgt_position in self.positions:
+            if not tgt_position in self.covered:
+                self.covered[tgt_position] = [self.positions[tgt_position]]
+            else:
+                self.covered[tgt_position].append(self.positions[tgt_position])
+        positions[tgt_position] = piece
 
         # Switch players.
         self.next_player = 1 - self.next_player
