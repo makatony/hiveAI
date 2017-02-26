@@ -1,23 +1,48 @@
 #!/usr/bin/python3
 
+import argparse
+
 import state
 from state import *
 import ui_ascii
 
+
+def ui_ascii_loop():
+    pass
+
+
 def main():
     # Entry point
-    board = Board({
-        (0,0): Piece(ANT, 0),
-        (-1,0): Piece(BEETLE, 1),
-        (1,0): Piece(SPIDER, 0),
-        (-1,1): Piece(GRASSHOPPER, 1),
-        (2,1): Piece(QUEEN, 0),
-        (-1,2): Piece(GRASSHOPPER, 1),
-    })
-    board.next_player=0
-    ui = ui_ascii.UI(board)
-    ui.print()
-    print(ui.read())
+    flags_parser = argparse.ArgumentParser(description='Play hive: hotseat, online, browser against AI, etc.')
+    flags_parser.add_argument('--p0', action='store', default='hotseat', choices=['hotseat', 'online', 'ai'], dest='p0')
+    flags_parser.add_argument('--p1', action='store', default='hotseat', choices=['hotseat', 'online', 'ai'], dest='p1')
+    flags = flags_parser.parse_args()
+    player_types = [flags.p0, flags.p1]
+
+    # TODO: check end of game.
+    board = Board()
+    while True:
+        player = board.next_player
+        if player_types[player] == 'hotseat':
+            ui = ui_ascii.UI(board)
+            ui.print()
+            insect, src, tgt = ui.read()
+            board.move(insect, src, tgt)
+        else:
+            raise ValueError('player of type \"{}\" not implemented'.format(player_types[player]))
+
+    # {
+    #     (0,0): Piece(ANT, 0),
+    #     (-1,0): Piece(BEETLE, 1),
+    #     (1,0): Piece(SPIDER, 0),
+    #     (-1,1): Piece(GRASSHOPPER, 1),
+    #     (2,1): Piece(QUEEN, 0),
+    #     (-1,2): Piece(GRASSHOPPER, 1),
+    # })
+    # board.next_player=0
+    # ui = ui_ascii.UI(board)
+    # ui.print()
+    # print(ui.read())
 
     # print('')
     # print('My pieces: ' + str(list(board.my_pieces())))

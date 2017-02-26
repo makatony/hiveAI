@@ -11,10 +11,13 @@ class UI:
     def __init__(self, board, color=True):
         self.board = board
         self.color = color
-        self.min_x = min(x for x, _ in self.board.positions)
-        self.max_x = max(x for x, _ in self.board.positions)
-        self.min_y = min(y for _, y in self.board.positions)
-        self.max_y = max(y for _, y in self.board.positions)
+        if self.board.positions:
+            self.min_x = min(x for x, _ in self.board.positions)
+            self.max_x = max(x for x, _ in self.board.positions)
+            self.min_y = min(y for _, y in self.board.positions)
+            self.max_y = max(y for _, y in self.board.positions)
+        else:
+            self.min_x, self.max_x, self.min_y, self.max_y = (0, 0, 0, 0)
 
         # Index board's valid moves.
         moves = {}
@@ -90,7 +93,8 @@ class UI:
 
     def _player_turn_line(self):
         piece = Piece(QUEEN, self.board.next_player)
-        return '%sPlayer %d turn to play:%s' % (self._color_start(piece), self.board.next_player, self._color_end())
+        return '[Move #%d] %sPlayer %d turn to play:%s' % (
+            self.board.move_number, self._color_start(piece), self.board.next_player, self._color_end())
 
     def _player_moves_lines(self):
         example = None

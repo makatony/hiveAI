@@ -43,6 +43,7 @@ class Board:
 
         # next player number
         self.next_player = 0
+        self.move_number = 0
         self.check_moves = False
 
     def valid_moves(self):
@@ -97,10 +98,11 @@ class Board:
                 raise ValueError("Move (%s,%s,%s) is not valid. Possible moves are: " %
                                  (insect, src_position, tgt_position, valid))
 
-        if src_position in None:
-            if not self.stack[piece.player][piece.insect]:
-                raise ValueError("No %s piece left to place" % insect)
-            self.stack[piece.player][piece.insect] -= 1
+        if src_position is None:
+            if not self.stack[self.next_player][insect]:
+                raise ValueError("No %s piece left to place for player %d" %
+                                 (insect, self.next_player))
+            self.stack[self.next_player][insect] -= 1
             piece = Piece(insect, self.next_player)
 
         else:
@@ -110,7 +112,7 @@ class Board:
             if self.positions[src_position].insect != insect:
                 raise ValueError(
                     "piece in {} is not a {}, instead it is a {}".format(
-                        src_position,insect, self.positions[src_position].insect))
+                        src_position, insect, self.positions[src_position].insect))
             if self.positions[src_position].player != self.next_player:
                 raise ValueError(
                     "instect {} in {} does not belong to player {}".format(
@@ -130,10 +132,11 @@ class Board:
                 self.covered[tgt_position] = [self.positions[tgt_position]]
             else:
                 self.covered[tgt_position].append(self.positions[tgt_position])
-        positions[tgt_position] = piece
+        self.positions[tgt_position] = piece
 
         # Switch players.
         self.next_player = 1 - self.next_player
+        self.move_number += 1
 
     def neighbours(self, position):
         """Valid neighbouring positions, in circular order."""

@@ -189,9 +189,56 @@ class TestState(unittest.TestCase):
 
         # Player's 1 beetle at (1,-2) is blocked since it would break the hive.
         board.next_player = 1
-        self._print_board(board)
+        # self._print_board(board)
         moves = self._list_moves(board, BEETLE, (1, -2))
         self.assertFalse(moves)
+
+    def _is_piece(self, piece, insect, player):
+        return piece.insect == insect and piece.player == player
+
+    def test_move(self):
+        layout = {
+            (0, 0): Piece(BEETLE, 0),
+            (0, -1): Piece(ANT, 1),
+            (0, 1): Piece(SPIDER, 0),
+            (1, -2): Piece(BEETLE, 1),
+            (1, 0): Piece(BEETLE, 0),
+            (1, -3): Piece(QUEEN, 1),
+            (0, 2): Piece(QUEEN, 0),
+            (2, -1): Piece(SPIDER, 1),
+            (2, 0): Piece(ANT, 0),
+        }
+        covered = {
+            (0, 0): [Piece(ANT, 0), Piece(BEETLE, 1)],
+        }
+        board = Board(layout, covered)
+        board.check_moves = True
+        self._print_board(board)
+
+        # Player 0: ynstack beetle.
+        board.move(BEETLE, (0, 0), (1, -1))
+        self.assertTrue(self._is_piece(board.positions[(1, 0)], BEETLE, 0))
+        self.assertTrue((0, 0) in board.covered)
+        self.assertEqual(len(board.covered[(0, 0)]), 1)
+        self.assertTrue(self._is_piece(board.covered[(0, 0)][0], ANT, 0))
+        self.assertTrue(self._is_piece(board.positions[(0, 0)], BEETLE, 1))
+
+        # Player 1: move beetle.
+        board.move(BEETLE, (0, 0), (-1, 0))
+        self.assertTrue(self._is_piece(board.positions[(-1, 0)], BEETLE, 1))
+        self.assertTrue((0, 0) not in board.covered)
+        self.assertTrue(self._is_piece(board.positions[(0, 0)], ANT, 0))
+
+        # Player 0: move ant and make sure board is left emtpy.
+        board.move(ANT, (2, 0), (1, -4))
+        self.assertTrue(self._is_piece(board.positions[(1, -4)], ANT, 0))
+        self.assertTrue((2, 0) not in board.positions)
+
+        # Player 1: put new piece into game.
+        board.move(ANT, None, (3, -2))
+        self.assertTrue(self._is_piece(board.positions[(3, -2)], ANT, 1))
+
+        # Try placing a piece.
 
 
 if __name__ == '__main__':
