@@ -19,6 +19,12 @@ class UI:
         else:
             self.min_x, self.max_x, self.min_y, self.max_y = (0, 0, 0, 0)
 
+        # Extra border around map:
+        self.min_x -= 1
+        self.max_x += 1
+        self.min_y -= 1
+        self.max_y += 1
+
         # Index board's valid moves.
         moves = {}
         for move in self.board.valid_moves():
@@ -116,16 +122,13 @@ class UI:
         """Yields lines of the printed board."""
         lines = []
         from_line = self.min_y * UI.LINES_PER_ROW
-        if self.min_y % 2 == 0:
-            from_line -= math.floor(UI.LINES_PER_ROW / 2)
-        to_line = (self.max_y + 1) * UI.LINES_PER_ROW
-        if self.max_y % 2 == 0:
-            to_line += math.floor(UI.LINES_PER_ROW / 2)
+        to_line = math.floor((self.max_y + 1 + 0.5) * UI.LINES_PER_ROW)
         print("min_y, max_y=[{}, {}], lines=[{},{}]".format(self.min_y, self.max_y, from_line, to_line))
+        yield self._board_line(from_line - 1, first_line=True)
         for line_y in range(from_line, to_line):
-            yield self._board_line(line_y)
+            yield self._board_line(line_y, first_line=False)
 
-    def _board_line(self, line_y):
+    def _board_line(self, line_y, first_line):
         """Yields one line of the printed board: relative to self.min_y."""
         strips = []
         for x in range(self.min_x, self.max_x + 2):
@@ -169,7 +172,10 @@ class UI:
                 else:
                     return '\\ {}'.format(self._covered_pieces(piece, covered, UI.CHARS_PER_COLUMN - 2))
         else:
-            return ' \\' + (UI.CHARS_PER_COLUMN - 2) * '_'
+            if is_final:
+                return ' \\'
+            else:
+                return ' \\' + (UI.CHARS_PER_COLUMN - 2) * '_'
 
     def _covered_pieces(self, piece, covered, width):
         """Returns a colored strip of up to width chars with piece and covered pieces."""

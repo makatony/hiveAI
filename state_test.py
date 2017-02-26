@@ -213,7 +213,7 @@ class TestState(unittest.TestCase):
         }
         board = Board(layout, covered)
         board.check_moves = True
-        self._print_board(board)
+        # self._print_board(board)
 
         # Player 0: ynstack beetle.
         board.move(BEETLE, (0, 0), (1, -1))
@@ -237,9 +237,6 @@ class TestState(unittest.TestCase):
         # Player 1: put new piece into game.
         board.move(ANT, None, (3, -2))
         self.assertTrue(self._is_piece(board.positions[(3, -2)], ANT, 1))
-
-        # Try placing a piece.
-
 
 if __name__ == '__main__':
     unittest.main()
