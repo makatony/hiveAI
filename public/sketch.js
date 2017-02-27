@@ -3,6 +3,7 @@ var slider;
 var boards = [];
 var pieceColors = ['#00FF00', '#FFFF00'];
 var draggingPiece;
+var drawEmptyNeighbors;
 
 function setup() {
 	createCanvas(600,500);
@@ -137,6 +138,8 @@ function draw() {
 	background(51);
 	setHexSize(slider.value());
 	
+	if (drawEmptyNeighbors != undefined) drawDotOnGridPos(drawEmptyNeighbors);
+	
 	boards[0].drawPieces(); //assuming we only have one board
 }
 
@@ -160,7 +163,89 @@ function Board() { // [{"row": 0,"col": 1,"player": 0,"insect": "S"},{....}]
 			this.pieces[i].drawHexagon();
 		}
 	}
+	
+	this.neighbours = function (gridPos) {
+		var x = gridPos.x;
+		var y = gridPos.y;
+        if (x % 2 == 0) return [createVector(x, y - 1), createVector(x + 1, y - 1), createVector(x + 1, y), createVector(x, y + 1), createVector(x - 1, y), createVector(x - 1, y - 1)]
+        else 			return [createVector(x, y - 1), createVector(x + 1, y), createVector(x + 1, y + 1), createVector(x, y + 1), createVector(x - 1, y + 1), createVector(x - 1, y)]
+	}
+	
+	this.isOccupied = function(gridPos) { // gridPos = p5.Vector
+		for (var i = 0; i < this.pieces.length; i++) {
+			if (gridPos.equals(this.pieces[i].gridPos)) return true;
+		}
+		return false;
+	}
+	
+	this.emptyNeighbours = function(gridPos) {
+		
+	}
+	
+	this.allEmptyNeighbours = function(gridPos,visited) {
+		if (visited == undefined) var visited = [];
+		if (gridPos == undefined) var gridPos = createVector(0,0);
+		var emptySlots = [];
+		
+		//checking if this node was visited already, if yes return empty array (break out of this recursion)
+		for (var j = 0; j < visited.length; j++) if ((visited[j].x == gridPos.x) && (visited[j].y == gridPos.y)) return [];
+		visited.push(gridPos);
+		
+		var neighbours_a = this.neighbours(gridPos);
+		for (var i = 0; i < neighbours_a.length; i++) {
+			if (this.isOccupied(neighbours_a[i])) 	emptySlots = emptySlots.concat(this.allEmptyNeighbours(neighbours_a[i],visited)); //branch node in recursion
+			else 									emptySlots.push(neighbours_a[i]); //leaf node in recursion
+		}
+		
+		return emptySlots;
+	}
+	
+	this.validEmptyNeighbours = function(thisPlayer,gridPos,visited) {
+		if (visited == undefined) var visited = [];
+		if (gridPos == undefined) var gridPos = createVector(0,0);
+		var emptySlots = [];
+		var oppPlayer = 1-thisPlayer;
+		
+		//checking if this node was visited already, if yes return empty array (break out of this recursion)
+		for (var j = 0; j < visited.length; j++) if ((visited[j].x == gridPos.x) && (visited[j].y == gridPos.y)) return [];
+		visited.push(gridPos);
+		
+		var neighbours_a = this.neighbours(gridPos);
+		for (var i = 0; i < neighbours_a.length; i++) {
+			if (this.isOccupied(neighbours_a[i])) 								emptySlots = emptySlots.concat(this.validEmptyNeighbours(thisPlayer,neighbours_a[i],visited)); //branch node in recursion
+			else if (!this.hasNeighboursOfPlayer(neighbours_a[i],oppPlayer)) 	emptySlots.push(neighbours_a[i]); //leaf node in recursion
+		}
+		
+		return emptySlots;
+	}
+	
+	this.getPieceInGridPos = function(gridPos) {
+		for (var i = 0; i < this.pieces.length; i++) {
+			if (this.pieces[i].gridPos.equals(gridPos)) return this.pieces[i];
+		}
+		return undefined;
+	}
+	
+	this.hasNeighboursOfPlayer = function(gridPos,player) {
+		var neighbours_a = this.neighbours(gridPos);
+		for (var i = 0; i < neighbours_a.length; i++) {
+			var thisPiece = this.getPieceInGridPos(neighbours_a[i]);
+			if ((thisPiece instanceof Piece) && (thisPiece.playerId == player)) return true;
+		}
+		return false;
+	}
 }
+
+
+function drawDotOnGridPos(gridPos_a) { // requires noLoop();
+	fill(255);
+	for (var i = 0; i < gridPos_a.length; i++) {
+		var pos = translateGrid2Pos(gridPos_a[i]);
+		ellipse(pos.x,pos.y,10,10);
+	}
+}
+
+
 
 function Piece(insect,col,row,playerId) {
 	this.insect = insect||'n/a';
@@ -232,12 +317,6 @@ function translateGrid2Pos(grid) {
 	return createVector(xPos,yPos);
 }
 
-// var hexSize = 30;
-// var hexWidth = hexSize * 2;
-// var hexHeight = Math.sqrt(3)/2 * hexWidth;
-// var hexHoffset = hexWidth*3/4;
-// var hexVoffset = hexHeight/2;
-
 
 function polygon(x, y, radius, npoints) {
   var angle = TWO_PI / npoints;
@@ -260,14 +339,6 @@ function isInsideHex(hexagon) {
 	var q2y = Math.abs(mouseY - h.pos.y);			// transform the test point locally and to quadrant 2
 	if ((q2x > hori*2) || (q2y > vert)) return false;			// bounding test (since q2 is in quadrant 2 only 2 tests are needed)
 	return vert * 2 * hori - vert * q2x - hori * q2y >= 0;	// finally the dot product can be reduced to this due to the hexagon symmetry
-
-	// const q2x:Number = Math.abs(pos.x - _center.x);			// transform the test point locally and to quadrant 2
-	// const q2y:Number = Math.abs(pos.y - _center.y);			// transform the test point locally and to quadrant 2
-	// if (q2x > _hori || q2y > _vert*2) return false;			// bounding test (since q2 is in quadrant 2 only 2 tests are needed)
-	// return 2 * _vert * _hori - _vert * q2x - _hori * q2y >= 0;	// finally the dot product can be reduced to this due to the hexagon symmetry
-
-
-
 }
 
 
@@ -322,6 +393,7 @@ function mouseDragged(event) {
 	  else { // if mouse is not inside any hexagon anymore, reset
 		draggingPiece.hexagon.updatePos();
 		draggingPiece = undefined;
+		drawEmptyNeighbors = undefined;
 	  }
   }
   else {  //if no piece yet in dragging, check if mouse is over a piece
@@ -331,6 +403,7 @@ function mouseDragged(event) {
 			if (isInsideHex(pieces[i].hexagon))	{
 				draggingPiece = pieces[i];
 				mouseInsideAnyHex = true;
+				drawEmptyNeighbors = boards[0].validEmptyNeighbours(draggingPiece.playerId);
 			}
 		}
 
@@ -363,6 +436,7 @@ function mouseReleased() {
 	if (draggingPiece instanceof Piece) {
 		var snapToPos = gridPosUnderMouse();
 		draggingPiece.setGridPos(snapToPos);
+		drawEmptyNeighbors = undefined;
 	}
 }
 
