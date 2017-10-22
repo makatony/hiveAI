@@ -28,13 +28,15 @@ class MyServerProtocol(WebSocketServerProtocol):
     def onOpen(self):
         print("WebSocket connection open.")
 
-        def hello():
+        """
+		def hello():
             encoded_string = "test msg every 20ms"
             self.sendMessage(encoded_string.encode('utf8'))
             self.factory.reactor.callLater(0.2, hello)
 
         # start sending messages every 20ms ..
-        # hello()
+        hello()
+		"""
 
     def onMessage(self, payload, isBinary):
         if isBinary:
