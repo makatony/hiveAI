@@ -8,9 +8,10 @@ from state import *
 class UI:
     """Ascii UI, can be used for printing, etc."""
 
-    def __init__(self, board, color=True):
+    def __init__(self, board, color=True, list_moves=True):
         self.board = board
         self.color = color
+        self.list_moves = list_moves
         if self.board.positions:
             self.min_x = min(x for x, _ in self.board.positions)
             self.max_x = max(x for x, _ in self.board.positions)
@@ -37,7 +38,7 @@ class UI:
             self.moves = sorted(list(moves.items()),
                                 key=lambda m: (m[0][1], m[0][0]) if m[0][1] is not None else ((), m[0][0]))
         else:
-            self.moves = None
+            self.moves = []
 
     # Each position in the board are represent by so many lines and chars.
     LINES_PER_ROW = 4
@@ -89,10 +90,11 @@ class UI:
         yield ''
         for line in self._stack_lines():
             yield line
-        yield ''
-        yield self._player_turn_line()
-        for line in self._player_moves_lines():
-            yield line
+        if self.list_moves:
+            yield ''
+            yield self._player_turn_line()
+            for line in self._player_moves_lines():
+                yield line
 
     def _stack_lines(self):
         """Yields lines representing pieces available in stack."""

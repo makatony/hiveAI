@@ -17,9 +17,9 @@ class Board:
         """Create a new board with specified positions of the pieces.
 
         Args:
-            positions: map of position (x,y) to Piece object. Each piece 
-              provided will be automatically removed from the number of  
-              available pieces to add to the board. 
+            positions: map of position (x,y) to Piece object. Each piece
+              provided will be automatically removed from the number of
+              available pieces to add to the board.
             covered: this is a map of position (x,y) to a list of covered
               Piece objects (bottom-to-top). Covered Pieces happen when
               a Beetle move on top of them, in which case they are blocked
@@ -32,14 +32,16 @@ class Board:
         # map of position: (x,y) -> Piece
         self.positions = positions
         for position, piece in positions.items():
-            self.stack[piece.player][piece.insect] = max(self.stack[piece.player][piece.insect] - 1, 0)
+            self.stack[piece.player][piece.insect] = max(
+                self.stack[piece.player][piece.insect] - 1, 0)
 
         # map of covered pieces: (x,y) -> Ordered (bottom-to-top) list of
         #   covered pieces.
         self.covered = covered
         for position, pieces in covered.items():
             for piece in pieces:
-                self.stack[piece.player][piece.insect] = max(self.stack[piece.player][piece.insect] - 1, 0)
+                self.stack[piece.player][piece.insect] = max(
+                    self.stack[piece.player][piece.insect] - 1, 0)
 
         # next player number
         self.next_player = 0
@@ -53,7 +55,8 @@ class Board:
         # New placements.
         new_placements = None
         player_stack = self.stack[self.next_player]
-        must_play_queen = player_stack[QUEEN] > 0 and len(tuple(self.my_pieces())) >= 3
+        must_play_queen = player_stack[QUEEN] > 0 and len(
+            tuple(self.my_pieces())) >= 3
         for insect, count in player_stack.items():
             if must_play_queen and insect != QUEEN:
                 continue
@@ -90,50 +93,61 @@ class Board:
             for tgt_position in tgt_positions:
                 yield (piece.insect, src_position, tgt_position)
 
-    def move(self, insect, src_position, tgt_position):
-        """Move insect from src_position to tgt_position. Set src_position=None for initial placment."""
+    def move(self, move):
+        """Move insect from source_position to target_position.
+
+        Args:
+            move: None (for skip move, only valid if there are no available moves), or
+                a tuple of (insect, source_position, target_position).
+        """
         if self.check_moves:
             valid = list(self.valid_moves())
-            if not (insect, src_position, tgt_position) in valid:
-                raise ValueError("Move (%s,%s,%s) is not valid. Possible moves are: " %
-                                 (insect, src_position, tgt_position, valid))
-
-        if src_position is None:
-            if not self.stack[self.next_player][insect]:
-                raise ValueError("No %s piece left to place for player %d" %
-                                 (insect, self.next_player))
-            self.stack[self.next_player][insect] -= 1
-            piece = Piece(insect, self.next_player)
-
-        else:
-            # Leaving from src_position.
-            if self.is_empty(src_position):
-                raise ValueError("no piece in {}".format(src_position))
-            if self.positions[src_position].insect != insect:
-                raise ValueError(
-                    "piece in {} is not a {}, instead it is a {}".format(
-                        src_position, insect, self.positions[src_position].insect))
-            if self.positions[src_position].player != self.next_player:
-                raise ValueError(
-                    "instect {} in {} does not belong to player {}".format(
-                        insect, src_position, self.next_player))
-
-            piece = self.positions[src_position]
-            if src_position in self.covered:
-                self.positions[src_position] = self.covered[src_position].pop()
-                if not self.covered[src_position]:
-                    self.covered.pop(src_position)
+            if len(valid) == 0:
+                if move is not None:
+                    raise ValueError('Move {} invalid, there are no valid moves, only option is None'.format(move))
             else:
-                self.positions.pop(src_position)
+                if move is None:
+                    raise ValueError('There are {} valid moves, player cannot use None (no move)'.format(len(valid)))
+                if not move in valid:
+                    raise ValueError("Move {} is not valid. Possible moves are {}".format(move, valid))
 
-        # Move piece to new location.
-        print(tgt_position)
-        if tgt_position in self.positions:
-            if not tgt_position in self.covered:
-                self.covered[tgt_position] = [self.positions[tgt_position]]
+        if move is not None:
+            insect, src_position, tgt_position = move
+            if src_position is None:
+                if not self.stack[self.next_player][insect]:
+                    raise ValueError("No %s piece left to place for player %d" %
+                                     (insect, self.next_player))
+                self.stack[self.next_player][insect] -= 1
+                piece = Piece(insect, self.next_player)
+
             else:
-                self.covered[tgt_position].append(self.positions[tgt_position])
-        self.positions[tgt_position] = piece
+                # Leaving from src_position.
+                if self.is_empty(src_position):
+                    raise ValueError("no piece in {}".format(src_position))
+                if self.positions[src_position].insect != insect:
+                    raise ValueError(
+                        "piece in {} is not a {}, instead it is a {}".format(
+                            src_position, insect, self.positions[src_position].insect))
+                if self.positions[src_position].player != self.next_player:
+                    raise ValueError(
+                        "instect {} in {} does not belong to player {}".format(
+                            insect, src_position, self.next_player))
+
+                piece = self.positions[src_position]
+                if src_position in self.covered:
+                    self.positions[src_position] = self.covered[src_position].pop()
+                    if not self.covered[src_position]:
+                        self.covered.pop(src_position)
+                else:
+                    self.positions.pop(src_position)
+
+            # Move piece to new location.
+            if tgt_position in self.positions:
+                if not tgt_position in self.covered:
+                    self.covered[tgt_position] = [self.positions[tgt_position]]
+                else:
+                    self.covered[tgt_position].append(self.positions[tgt_position])
+            self.positions[tgt_position] = piece
 
         # Switch players.
         self.next_player = 1 - self.next_player
@@ -162,7 +176,8 @@ class Board:
 
         # print("start_neighbours=%s" % start_neighbours)
 
-        # Starting from one of the neighbors (start_neighbours[0]), all other have to be reached.
+        # Starting from one of the neighbors (start_neighbours[0]), all other
+        # have to be reached.
         visited = set()
         visited.add(position)
 
@@ -253,7 +268,8 @@ class Board:
           invalid: don't consider these positions.
         """
         neighbours = self.neighbours(src_position)
-        occupied = [(self.is_occupied(pos) and pos != original_position) for pos in neighbours]
+        occupied = [(self.is_occupied(pos) and pos != original_position)
+                    for pos in neighbours]
 
         for ii in range(len(neighbours)):
             tgt_pos = neighbours[ii]
@@ -272,10 +288,12 @@ class Board:
             is_connected = False
             for connected_pos in self.neighbours(tgt_pos):
                 if connected_pos == src_position or connected_pos == original_position:
-                    # src_position and original_position are supposed to be empty.
+                    # src_position and original_position are supposed to be
+                    # empty.
                     continue
                 if self.is_occupied(connected_pos):
-                    # All good, position is connected, we only need one position.
+                    # All good, position is connected, we only need one
+                    # position.
                     is_connected = True
                     break
             if not is_connected:
@@ -288,7 +306,8 @@ class Board:
 
     def queen_moves(self, src_position):
         """Enumerate queen's move from src_position, assuming she can move."""
-        return self.empty_and_connected_neighbours(src_position, original_position=src_position, invalid=set([src_position]))
+        return self.empty_and_connected_neighbours(
+            src_position, original_position=src_position, invalid=set([src_position]))
 
     def spider_moves(self, src_position):
         """Enumerate spider's moves from src_position: it must make 3 steps."""
@@ -307,12 +326,14 @@ class Board:
         else:
             for next_pos in self.empty_and_connected_neighbours(src_position, original_position, invalid=path):
                 path += [next_pos]
-                self._spider_moves_dfs(next_pos, original_position, depth, end_pos, path)
+                self._spider_moves_dfs(
+                    next_pos, original_position, depth, end_pos, path)
                 path.pop()
 
     def grasshopper_moves(self, src_position):
         for direction in range(Board.NUM_NEIGHBOURS):
-            steps, tgt_pos = self._grasshopper_next_free(src_position, direction)
+            steps, tgt_pos = self._grasshopper_next_free(
+                src_position, direction)
             if steps > 1:
                 yield(tgt_pos)
 
@@ -355,8 +376,48 @@ class Board:
 
         # And it moves like the queen: notice that if not moving from the top,
         # it can't squeeze between pieces either.
-        for pos in self.empty_and_connected_neighbours(src_position, original_position=src_position, invalid=set([src_position])):
+        for pos in self.empty_and_connected_neighbours(
+                src_position, original_position=src_position, invalid=set([src_position])):
             yield pos
+
+    def end_of_game(self):
+        """Returns whether the game is finished, and the winner.
+
+        Returns:
+            Tuple with game finished (bool) and winner: player number, or -1
+            if a draw.
+        """
+        # Collects players with Queens with no empty neighbours.
+        players_lost = []
+        for position, piece in self.positions.items():
+            if piece.insect == QUEEN and next(self.empty_neighbours(position), None) is None:
+                players_lost.append(piece.player)
+        for position, pieces in self.covered.items():
+            for piece in pieces:
+                if piece.insect == QUEEN and next(self.empty_neighbours(position), None) is None:
+                    players_lost.append(piece.player)
+
+        if players_lost:
+            if len(players_lost) > 2 or len(set(players_lost)) != len(players_lost):
+                raise ValueError(
+                    'Invalid set of Queens sorounded: %{}'.format(players_lost))
+
+        if len(players_lost) == 1:
+            return (True, 1 - players_lost[0])
+        elif len(players_lost) == 2:
+            return (True, -1)
+
+        # Check if there are any available moves.
+        for _ in self.valid_moves():
+            return (False, -1)
+        self.next_player = 1 - self.next_player
+        for _ in self.valid_moves():
+            self.next_player = 1 - self.next_player
+            return (False, -1)
+        self.next_player = 1 - self.next_player
+
+        # No more moves available.
+        return (True, -1)
 
 
 class Piece:

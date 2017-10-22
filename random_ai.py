@@ -11,5 +11,6 @@ class RandomAI:
     def play(self, board):
         """Returns insect, src, tgt tuple."""
         valid_moves = [m for m in board.valid_moves()]
-        print(valid_moves)
+        if not valid_moves:
+            return None
         return random.choice(valid_moves)

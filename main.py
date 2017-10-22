@@ -12,6 +12,7 @@ def main():
     flags_parser = argparse.ArgumentParser(description='Play hive: hotseat, online, browser against AI, etc.')
     flags_parser.add_argument('--p0', action='store', default='hotseat', choices=['hotseat', 'online', 'ai'], dest='p0')
     flags_parser.add_argument('--p1', action='store', default='hotseat', choices=['hotseat', 'online', 'ai'], dest='p1')
+    flags_parser.add_argument('--ai_ui', action='store_true')
     flags = flags_parser.parse_args()
     player_types = [flags.p0, flags.p1]
 
@@ -21,42 +22,42 @@ def main():
     # TODO: check end of game.
     board = Board()
     while True:
+        # Check for end-of-game.
+        end_of_game, winner = board.end_of_game()
+        if end_of_game:
+            ui = ui_ascii.UI(board, list_moves=False)
+            ui.print()
+            if winner == -1:
+                print('\nDRAW!!!\n')
+            else:
+                print('\nPLAYER {} WINS'.format(winner))
+            break
+
         player = board.next_player
         if player_types[player] == 'hotseat':
             ui = ui_ascii.UI(board)
             ui.print()
-            insect, src, tgt = ui.read()
-            board.move(insect, src, tgt)
+
+            valid = next(board.valid_moves(), None)
+            if valid is None:
+                _ = input('No valid move, press enter to continue')
+                move = None
+            else:
+                move = ui.read()
+            board.move(move)
+
         elif player_types[player] == 'ai':
-            insect, src, tgt = ais[player].play(board)
-            board.move(insect, src, tgt)
+            if flags.ai_ui:
+                ui = ui_ascii.UI(board)
+                ui.print()
+            move = ais[player].play(board)
+            if flags.ai_ui:
+                print("Selected move: {}".format(move))
+
+            board.move(move)
+
         else:
             raise ValueError('player of type \"{}\" not implemented'.format(player_types[player]))
-
-    # {
-    #     (0,0): Piece(ANT, 0),
-    #     (-1,0): Piece(BEETLE, 1),
-    #     (1,0): Piece(SPIDER, 0),
-    #     (-1,1): Piece(GRASSHOPPER, 1),
-    #     (2,1): Piece(QUEEN, 0),
-    #     (-1,2): Piece(GRASSHOPPER, 1),
-    # })
-    # board.next_player=0
-    # ui = ui_ascii.UI(board)
-    # ui.print()
-    # print(ui.read())
-
-    # print('')
-    # print('My pieces: ' + str(list(board.my_pieces())))
-    # print('Opponent pieces: ' + str(list(board.opponent_pieces())))
-    # print('Occupied neighours: ' + str(list(board.occupied_neighbours((0, 0)))))
-    # print('Empty neighours: ' + str(list(board.empty_neighbours((0, 0)))))
-    # print('My neighours: ' + str(list(board.my_neighbours((0, 0)))))
-    # print('Opponent neighours: ' + str(list(board.opponent_neighbours((0, 0)))))
-    # print('Connected placements: ' +str( board.connected_placements()))
-    # print('New placements: ' + str(board.new_placements()))
-    # print('Removable: ' + str(board.removable((0, 0))))
-    # print('Removable: ' + str(board.removable((-1, 1))))
 
 
 def create_ai(player_type):

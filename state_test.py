@@ -216,7 +216,7 @@ class TestState(unittest.TestCase):
         # self._print_board(board)
 
         # Player 0: ynstack beetle.
-        board.move(BEETLE, (0, 0), (1, -1))
+        board.move((BEETLE, (0, 0), (1, -1)))
         self.assertTrue(self._is_piece(board.positions[(1, 0)], BEETLE, 0))
         self.assertTrue((0, 0) in board.covered)
         self.assertEqual(len(board.covered[(0, 0)]), 1)
@@ -224,19 +224,102 @@ class TestState(unittest.TestCase):
         self.assertTrue(self._is_piece(board.positions[(0, 0)], BEETLE, 1))
 
         # Player 1: move beetle.
-        board.move(BEETLE, (0, 0), (-1, 0))
+        board.move((BEETLE, (0, 0), (-1, 0)))
         self.assertTrue(self._is_piece(board.positions[(-1, 0)], BEETLE, 1))
         self.assertTrue((0, 0) not in board.covered)
         self.assertTrue(self._is_piece(board.positions[(0, 0)], ANT, 0))
 
         # Player 0: move ant and make sure board is left emtpy.
-        board.move(ANT, (2, 0), (1, -4))
+        board.move((ANT, (2, 0), (1, -4)))
         self.assertTrue(self._is_piece(board.positions[(1, -4)], ANT, 0))
         self.assertTrue((2, 0) not in board.positions)
 
         # Player 1: put new piece into game.
-        board.move(ANT, None, (3, -2))
+        board.move((ANT, None, (3, -2)))
         self.assertTrue(self._is_piece(board.positions[(3, -2)], ANT, 1))
+
+    def test_end_of_game(self):
+        # Sample "normal" layout.
+        layout = {
+            (0, 0): Piece(BEETLE, 0),
+            (0, -1): Piece(ANT, 1),
+            (0, 1): Piece(SPIDER, 0),
+            (1, -2): Piece(BEETLE, 1),
+            (1, 0): Piece(BEETLE, 0),
+            (1, -3): Piece(QUEEN, 1),
+            (0, 2): Piece(QUEEN, 0),
+            (2, -1): Piece(SPIDER, 1),
+            (2, 0): Piece(ANT, 0),
+        }
+        covered = {
+            (0, 0): [Piece(ANT, 0), Piece(BEETLE, 1)],
+        }
+        board = Board(layout, covered)
+        end_of_game, winner = board.end_of_game()
+        self.assertFalse(end_of_game)
+
+        # No queens in board.
+        layout = {
+            (0, 0): Piece(BEETLE, 0),
+            (0, -1): Piece(ANT, 1),
+        }
+        covered = {}
+        board = Board(layout, covered)
+        end_of_game, winner = board.end_of_game()
+        self.assertFalse(end_of_game)
+
+        # Normal win.
+        layout = {
+            (0, 0): Piece(QUEEN, 0),
+            (0, -1): Piece(ANT, 1),
+            (1, -1): Piece(SPIDER, 0),
+            (1, 0): Piece(SPIDER, 0),
+            (0, 1): Piece(SPIDER, 0),
+            (-1, 0): Piece(BEETLE, 1),
+            (-1, -1): Piece(QUEEN, 1),
+        }
+        covered = {}
+        board = Board(layout, covered)
+        end_of_game, winner = board.end_of_game()
+        self.assertTrue(end_of_game)
+        self.assertEqual(1, winner)
+
+        # Win with a covered queen..
+        layout = {
+            (0, 0): Piece(ANT, 0),
+            (0, -1): Piece(ANT, 1),
+            (1, -1): Piece(SPIDER, 0),
+            (1, 0): Piece(SPIDER, 0),
+            (0, 1): Piece(SPIDER, 0),
+            (-1, 0): Piece(BEETLE, 1),
+            (-1, -1): Piece(QUEEN, 1),
+        }
+        covered = {
+            (0, 0): [Piece(ANT, 1), Piece(QUEEN, 1)]
+        }
+        board = Board(layout, covered)
+        end_of_game, winner = board.end_of_game()
+        self.assertTrue(end_of_game)
+        self.assertEqual(0, winner)
+
+        # Tie, both queens covered.
+        layout = {
+            (0, 0): Piece(ANT, 0),
+            (0, -1): Piece(ANT, 1),
+            (1, -1): Piece(SPIDER, 0),
+            (1, 0): Piece(SPIDER, 0),
+            (0, 1): Piece(SPIDER, 0),
+            (-1, 0): Piece(BEETLE, 1),
+            (-1, -1): Piece(QUEEN, 1),
+        }
+        covered = {
+            (0, 0): [Piece(QUEEN, 0), Piece(QUEEN, 1)]
+        }
+        board = Board(layout, covered)
+        end_of_game, winner = board.end_of_game()
+        self.assertTrue(end_of_game)
+        self.assertEqual(-1, winner)
+
 
 if __name__ == '__main__':
     unittest.main()
