@@ -69,7 +69,7 @@ class UI:
 
             match = UI.piece_only_re.fullmatch(raw)
             if match is None:
-                print('Unknown entry "%s"' % raw)
+                print('Cannot parse move "%s"' % raw)
                 continue
             ii = int(match.group(1))
             if ii < 0 or ii >= len(self.moves):
@@ -78,7 +78,10 @@ class UI:
             if len(self.moves[ii][1]) > 1:
                 print('Piece #%d have multiple target locations, you must specify' % ii)
                 continue
-            return (self.moves[ii][0][0], self.moves[ii][0][1], move_to)
+            return (self.moves[ii][0][0], self.moves[ii][0][1], self.moves[ii][1][0])
+
+    def is_finished(self):
+        return False
 
     def _all_lines(self):
         for line in self._board_lines():

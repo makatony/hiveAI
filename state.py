@@ -127,6 +127,7 @@ class Board:
                 self.positions.pop(src_position)
 
         # Move piece to new location.
+        print(tgt_position)
         if tgt_position in self.positions:
             if not tgt_position in self.covered:
                 self.covered[tgt_position] = [self.positions[tgt_position]]

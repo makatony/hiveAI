@@ -2,13 +2,9 @@
 
 import argparse
 
-import state
 from state import *
 import ui_ascii
-
-
-def ui_ascii_loop():
-    pass
+from random_ai import RandomAI
 
 
 def main():
@@ -19,6 +15,9 @@ def main():
     flags = flags_parser.parse_args()
     player_types = [flags.p0, flags.p1]
 
+    # Initialize AIs
+    ais = [create_ai(player_types[p]) for p in [0, 1]]
+
     # TODO: check end of game.
     board = Board()
     while True:
@@ -27,6 +26,9 @@ def main():
             ui = ui_ascii.UI(board)
             ui.print()
             insect, src, tgt = ui.read()
+            board.move(insect, src, tgt)
+        elif player_types[player] == 'ai':
+            insect, src, tgt = ais[player].play(board)
             board.move(insect, src, tgt)
         else:
             raise ValueError('player of type \"{}\" not implemented'.format(player_types[player]))
@@ -56,6 +58,12 @@ def main():
     # print('Removable: ' + str(board.removable((0, 0))))
     # print('Removable: ' + str(board.removable((-1, 1))))
 
+
+def create_ai(player_type):
+    """Creates AI player."""
+    if player_type != 'ai':
+        return None
+    return RandomAI()
 
 if __name__ == '__main__':
     main()
